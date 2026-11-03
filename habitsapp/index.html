@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>auramaxx – dein Lifemaxxing-Tracker</title>
+<meta name="description" content="Habits, Ernährung, Training, Schlaf und Fortschrittsfotos dokumentieren. Sammle Aura, level hoch und teile deinen Tag.">
+<meta name="theme-color" content="#09090d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="auramaxx">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <span class="brand">aura<span>maxx</span></span>
+    <button type="button" class="level-chip" id="levelChip" data-action="nav" data-view="progress" data-k="levelchip"></button>
+    <button type="button" class="icon-btn" data-action="settings" aria-label="Einstellungen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main" class="app" tabindex="-1">
+  <div class="datebar" id="datebar">
+    <button type="button" class="icon-btn" id="datePrev" data-action="date-prev" data-k="dprev" aria-label="Vorheriger Tag">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="date-mid">
+      <b id="dateLabel" aria-live="polite"></b>
+      <span id="dateSub"></span>
+      <button type="button" class="date-today" id="dateToday" data-action="date-today">Zurück zu heute</button>
+    </div>
+    <button type="button" class="icon-btn" id="dateNext" data-action="date-next" data-k="dnext" aria-label="Nächster Tag">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+
+  <section class="view" id="view-today" aria-label="Heute"></section>
+  <section class="view" id="view-habits" aria-label="Habits" hidden></section>
+  <section class="view" id="view-food" aria-label="Ernährung" hidden></section>
+  <section class="view" id="view-train" aria-label="Training" hidden></section>
+  <section class="view" id="view-progress" aria-label="Fortschritt" hidden></section>
+</main>
+
+<nav class="tabbar" aria-label="Hauptnavigation">
+  <div class="tabbar-in">
+    <button type="button" class="tab" data-action="nav" data-view="today" data-k="tab-today">
+      <span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span>Heute
+    </button>
+    <button type="button" class="tab" data-action="nav" data-view="habits" data-k="tab-habits">
+      <span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg></span>Habits
+    </button>
+    <button type="button" class="tab" data-action="nav" data-view="food" data-k="tab-food">
+      <span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7c-2-3-7-2.5-7 2.5C5 15 9 21 12 21s7-6 7-11.5C19 4.5 14 4 12 7z"/><path d="M12 7c0-2 1-4 3-5"/></svg></span>Essen
+    </button>
+    <button type="button" class="tab" data-action="nav" data-view="train" data-k="tab-train">
+      <span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg></span>Training
+    </button>
+    <button type="button" class="tab" data-action="nav" data-view="progress" data-k="tab-progress">
+      <span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18"/><path d="M6 16v-4M11 16V8M16 16v-6M21 4l-5 5-3-3-4 4"/></svg></span>Fortschritt
+    </button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+<input type="file" id="photoInput" accept="image/*" hidden>
+<input type="file" id="importInput" accept="application/json,.json" hidden>
+<datalist id="exList"></datalist>
+
+<!-- Onboarding -->
+<dialog id="dlgOnboard" aria-labelledby="oTitle">
+  <form class="sheet" id="formOnboard">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="oTitle">Willkommen bei aura<span style="color:var(--accent-text)">maxx</span></h2>
+    <p class="lead">Dokumentiere jeden Tag, was du für dich tust. Jede Gewohnheit, jede Mahlzeit, jedes Training bringt dir Aura. 100 Aura am Tag heißt: Tag gemaxxt.</p>
+    <label class="field">Wie sollen wir dich nennen?
+      <input id="oName" type="text" maxlength="24" autocomplete="given-name" placeholder="Dein Name">
+    </label>
+    <fieldset>
+      <legend>Wähle deine ersten Habits</legend>
+      <div class="chips" id="oHabits"></div>
+      <p class="hint" style="margin-top:8px">Du kannst später jederzeit welche hinzufügen oder ändern.</p>
+    </fieldset>
+    <div class="row-fields">
+      <label class="field">Wasser pro Tag <span class="opt">Gläser à 250 ml</span>
+        <input id="oWater" type="number" inputmode="numeric" min="2" max="20" value="8">
+      </label>
+      <label class="field">Proteinziel <span class="opt">Gramm, optional</span>
+        <input id="oProtein" type="number" inputmode="numeric" min="0" max="400" placeholder="z. B. 120">
+      </label>
+    </div>
+    <button type="submit" class="btn btn-primary wide">Los geht’s</button>
+  </form>
+</dialog>
+
+<!-- Habit -->
+<dialog id="dlgHabit" aria-labelledby="hTitle">
+  <form class="sheet" id="formHabit">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="hTitle">Neuer Habit</h2>
+    <div class="row2">
+      <label class="field emoji-field">Emoji
+        <input id="hEmoji" type="text" maxlength="8" autocomplete="off">
+      </label>
+      <label class="field">Name
+        <input id="hName" type="text" maxlength="30" autocomplete="off" placeholder="z. B. Kalt duschen" required>
+      </label>
+    </div>
+    <div class="emoji-pick" id="hEmojiPick" role="group" aria-label="Emoji auswählen"></div>
+    <label class="field">Ziel <span class="opt">optional</span>
+      <input id="hGoal" type="text" maxlength="40" autocomplete="off" placeholder="z. B. 2 Minuten">
+    </label>
+    <fieldset>
+      <legend>Bereich</legend>
+      <div class="seg" id="hCat"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Wie oft pro Woche?</legend>
+      <div class="seg grid7" id="hFreq"></div>
+      <p class="hint" id="hFreqNote" style="margin-top:8px"></p>
+    </fieldset>
+    <div class="actions">
+      <button type="button" class="btn danger" id="hDelete">Löschen</button>
+      <span class="grow"></span>
+      <button type="button" class="btn" data-close>Abbrechen</button>
+      <button type="submit" class="btn btn-primary" id="hSave">Hinzufügen</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Mahlzeit -->
+<dialog id="dlgMeal" aria-labelledby="mTitle">
+  <form class="sheet" id="formMeal">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="mTitle">Mahlzeit eintragen</h2>
+    <div id="mRecent"></div>
+    <fieldset>
+      <legend>Mahlzeit</legend>
+      <div class="seg" id="mType"></div>
+    </fieldset>
+    <label class="field">Was gab’s?
+      <input id="mName" type="text" maxlength="60" autocomplete="off" placeholder="z. B. Skyr mit Beeren" required>
+    </label>
+    <div class="row-fields">
+      <label class="field">Uhrzeit
+        <input id="mTime" type="time">
+      </label>
+      <label class="field">Protein <span class="opt">g</span>
+        <input id="mProtein" type="number" inputmode="decimal" min="0" max="300" step="1" placeholder="optional">
+      </label>
+    </div>
+    <label class="field">Kalorien <span class="opt">optional, nur wenn du magst</span>
+      <input id="mKcal" type="number" inputmode="numeric" min="0" max="5000" step="1" placeholder="kcal">
+    </label>
+    <fieldset>
+      <legend>Was trifft zu?</legend>
+      <div class="seg" id="mTags"></div>
+    </fieldset>
+    <div class="actions">
+      <button type="button" class="btn danger" id="mDelete">Löschen</button>
+      <span class="grow"></span>
+      <button type="button" class="btn" data-close>Abbrechen</button>
+      <button type="submit" class="btn btn-primary" id="mSave">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Training -->
+<dialog id="dlgWorkout" aria-labelledby="wTitle">
+  <form class="sheet" id="formWorkout">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="wTitle">Training eintragen</h2>
+    <fieldset>
+      <legend>Art</legend>
+      <div class="seg" id="wType"></div>
+    </fieldset>
+    <div class="row-fields">
+      <label class="field">Dauer <span class="opt">Minuten</span>
+        <input id="wDur" type="number" inputmode="numeric" min="1" max="600" required>
+      </label>
+      <label class="field">Uhrzeit
+        <input id="wTime" type="time">
+      </label>
+    </div>
+    <fieldset>
+      <legend>Wie hart war’s? <span class="opt">1 = locker, 5 = am Limit</span></legend>
+      <div class="seg grid5" id="wInt"></div>
+    </fieldset>
+    <label class="field" id="wDistWrap">Distanz <span class="opt">km, optional</span>
+      <input id="wDist" type="number" inputmode="decimal" min="0" max="500" step="0.1" placeholder="z. B. 5">
+    </label>
+    <fieldset id="wExWrap">
+      <legend>Übungen</legend>
+      <div class="ex-head" aria-hidden="true"><span>Übung</span><span>Sätze</span><span>Wdh.</span><span>kg</span><span></span></div>
+      <div class="ex-rows" id="wEx"></div>
+      <button type="button" class="btn sm" id="wAddEx" style="margin-top:10px">+ Übung</button>
+    </fieldset>
+    <label class="field">Notiz <span class="opt">optional</span>
+      <textarea id="wNote" rows="2" maxlength="500" placeholder="Wie lief’s? Neue Bestleistung?"></textarea>
+    </label>
+    <div class="actions">
+      <button type="button" class="btn danger" id="wDelete">Löschen</button>
+      <span class="grow"></span>
+      <button type="button" class="btn" data-close>Abbrechen</button>
+      <button type="submit" class="btn btn-primary" id="wSave">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Foto ansehen -->
+<dialog id="dlgPhoto" aria-labelledby="pTitle">
+  <div class="sheet">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="pTitle">Fortschrittsfoto</h2>
+    <img id="pImg" class="photo-full" alt="">
+    <div class="actions">
+      <button type="button" class="btn danger" id="pDelete">Löschen</button>
+      <span class="grow"></span>
+      <button type="button" class="btn btn-primary" data-close>Fertig</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Teilen -->
+<dialog id="dlgShare" aria-labelledby="sTitle">
+  <div class="sheet">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="sTitle">Deine Tageskarte</h2>
+    <p class="lead">Im Story-Format für TikTok. Poste sie mit #lifemaxxing und zeig, wie du dranbleibst.</p>
+    <img id="shareImg" class="share-img" alt="">
+    <p class="hint" id="shareStatus" role="status" style="text-align:center"></p>
+    <div class="actions">
+      <button type="button" class="btn" data-close>Schließen</button>
+      <span class="grow"></span>
+      <a class="btn" id="shareDl" href="#" download="auramaxx.png">Bild speichern</a>
+      <button type="button" class="btn btn-primary" id="shareBtn" hidden>Teilen</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Einstellungen -->
+<dialog id="dlgSettings" aria-labelledby="setTitle">
+  <form class="sheet" id="formSettings">
+    <div class="grip" aria-hidden="true"></div>
+    <h2 id="setTitle">Einstellungen</h2>
+    <label class="field">Name
+      <input id="sName" type="text" maxlength="24" autocomplete="given-name">
+    </label>
+    <div class="row-fields">
+      <label class="field">Wasserziel <span class="opt">Gläser</span>
+        <input id="sWater" type="number" inputmode="numeric" min="2" max="20">
+      </label>
+      <label class="field">Proteinziel <span class="opt">g, 0 = aus</span>
+        <input id="sProtein" type="number" inputmode="numeric" min="0" max="400">
+      </label>
+    </div>
+    <label class="field">Trainings pro Woche
+      <input id="sWorkouts" type="number" inputmode="numeric" min="1" max="14">
+    </label>
+    <fieldset>
+      <legend>Design</legend>
+      <div class="seg" id="sTheme">
+        <label><input type="radio" name="theme" value="auto"><span>Automatisch</span></label>
+        <label><input type="radio" name="theme" value="dark"><span>Dunkel</span></label>
+        <label><input type="radio" name="theme" value="light"><span>Hell</span></label>
+      </div>
+    </fieldset>
+    <div class="card" style="padding:14px;box-shadow:none">
+      <p class="small muted">Alle Daten bleiben auf diesem Gerät in deinem Browser. Mach ab und zu ein Backup. Fotos sind im Backup nicht enthalten.</p>
+      <div class="actions" style="margin-top:10px">
+        <button type="button" class="btn sm" id="sExport">Backup exportieren</button>
+        <button type="button" class="btn sm" id="sImport">Backup importieren</button>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="sReset">Alles zurücksetzen</button>
+      <span class="grow"></span>
+      <button type="button" class="btn" data-close>Abbrechen</button>
+      <button type="submit" class="btn btn-primary">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js" defer></script>
+</body>
+</html>
