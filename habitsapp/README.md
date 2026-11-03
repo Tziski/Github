@@ -1,6 +1,6 @@
 # auramaxx – dein Lifemaxxing-Tracker
 
-Eine App für Self-Improvement im Stil vom TikTok-Trend **Lifemaxxing**. Du dokumentierst jeden Tag, was du für dich tust: Habits, Essen, Training, Schlaf, Stimmung und Fortschrittsfotos. Dafür sammelst du **Aura**. 100 Aura am Tag heißt: Tag gemaxxt.
+Eine englischsprachige App für Self-Improvement im Stil vom TikTok-Trend **Lifemaxxing**. Du dokumentierst jeden Tag, was du für dich tust: Habits, Essen, Training, Schlaf, Stimmung und Fortschrittsfotos. Dafür sammelst du **Aura**. 100 Aura am Tag heißt: Tag gemaxxt.
 
 ## Funktionen
 
@@ -30,7 +30,7 @@ Eine App für Self-Improvement im Stil vom TikTok-Trend **Lifemaxxing**. Du doku
 - Wochenziel und Minuten pro Tag als Diagramm
 
 **Fortschritt**
-- 8 Level von „NPC“ bis „Legende“
+- 8 Level von „NPC“ bis „Legend“
 - Konstanz-Heatmap der letzten 12 Wochen
 - Stimmung und Schlaf der letzten 14 Tage im Diagramm
 - Glow-up-Fotos mit Vorher/Nachher-Vergleich (Day X vs. Day Y)

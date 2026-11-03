@@ -1,6 +1,6 @@
-/* auramaxx – Styles
-   Dunkles, kontrastreiches Design mit Lime als Aura-Farbe. Heller Modus folgt dem System
-   oder der Einstellung. Alle Touch-Ziele sind mindestens 44 px groß. */
+/* auramaxx – styles
+   Dark, high-contrast design with lime as the Aura color. Light mode follows the system
+   or the setting. All touch targets are at least 44 px. */
 
 :root {
   --bg: #f4f4ef;
@@ -75,7 +75,7 @@ h1, h2, h3, p { margin: 0; }
 }
 .skip:focus { top: 12px; }
 
-/* ---------- Kopfzeile ---------- */
+/* ---------- Top bar ---------- */
 .topbar {
   position: sticky; top: 0; z-index: 20;
   padding-top: env(safe-area-inset-top, 0px);
@@ -146,7 +146,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 8px 4px; min-height: 44px; font-size: 15px;
 }
 
-/* ---------- Buttons & Chips ---------- */
+/* ---------- Buttons & chips ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 48px; padding: 12px 18px; border-radius: 99px;
@@ -175,7 +175,7 @@ h1, h2, h3, p { margin: 0; }
   font-size: 13px; font-weight: 650;
 }
 
-/* ---------- Heute: Hero ---------- */
+/* ---------- Today: hero ---------- */
 .hero {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px;
   background:
@@ -283,7 +283,7 @@ h1, h2, h3, p { margin: 0; }
 .log .le { font-size: 20px; text-align: center; }
 .log small { color: var(--muted); }
 
-/* ---------- Essen ---------- */
+/* ---------- Food ---------- */
 .glasses { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; margin: 4px 0 12px; }
 .glass {
   position: relative; overflow: hidden; height: 52px; padding: 0;
@@ -313,7 +313,7 @@ h1, h2, h3, p { margin: 0; }
 .group-label { font-size: 12px; text-transform: uppercase; letter-spacing: .9px; color: var(--muted); font-weight: 750; margin: 14px 0 0; }
 .group-label:first-child { margin-top: 0; }
 
-/* ---------- Statistiken ---------- */
+/* ---------- Stats ---------- */
 .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .stats.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .stat { background: var(--surface-2); border-radius: 16px; padding: 12px 14px; min-width: 0; }
@@ -371,7 +371,7 @@ h1, h2, h3, p { margin: 0; }
 .keys i { width: 18px; height: 0; border-top: 3px solid var(--violet); display: inline-block; }
 .keys i.dash { border-top: 3px dashed var(--cyan); }
 
-/* ---------- Fotos ---------- */
+/* ---------- Photos ---------- */
 .photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .photo-btn { position: relative; padding: 0; border: 0; border-radius: 14px; overflow: hidden; aspect-ratio: 3 / 4; background: var(--surface-2); }
 .photo-btn img, .compare img { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -388,7 +388,7 @@ h1, h2, h3, p { margin: 0; }
 .empty { text-align: center; padding: 18px 8px; color: var(--muted); }
 .empty .e { display: block; font-size: 34px; margin-bottom: 6px; }
 
-/* ---------- Tab-Leiste ---------- */
+/* ---------- Tab bar ---------- */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
   background: color-mix(in srgb, var(--surface) 90%, transparent);
@@ -406,7 +406,7 @@ h1, h2, h3, p { margin: 0; }
 .tab[aria-current="page"] { color: var(--ink); }
 .tab[aria-current="page"] .ti { background: var(--accent); color: var(--accent-ink); }
 
-/* ---------- Dialoge ---------- */
+/* ---------- Dialogs ---------- */
 dialog {
   width: 100%; max-width: 560px; max-height: 92dvh;
   margin: auto auto 0; padding: 0; border: 0;
@@ -460,7 +460,7 @@ legend { font-weight: 650; font-size: 14px; padding: 0; margin-bottom: 8px; }
 .photo-full { width: 100%; max-height: 62dvh; object-fit: contain; border-radius: 18px; background: var(--surface-2); display: block; }
 .share-img { display: block; width: min(100%, 270px); aspect-ratio: 9 / 16; margin: 0 auto; border-radius: 20px; background: var(--surface-2); object-fit: cover; }
 
-/* ---------- Toast & Konfetti ---------- */
+/* ---------- Toast & confetti ---------- */
 .toast {
   position: fixed; left: 50%; bottom: calc(98px + env(safe-area-inset-bottom, 0px)); z-index: 80;
   transform: translate(-50%, 16px); opacity: 0; pointer-events: none;

@@ -1,6 +1,6 @@
-/* auramaxx Service Worker: macht die App offline nutzbar.
-   Bei Änderungen an den Dateien die Versionsnummer erhöhen. */
-const CACHE = 'auramaxx-v1';
+/* auramaxx service worker: makes the app work offline.
+   Bump the version number whenever files change. */
+const CACHE = 'auramaxx-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -25,7 +25,7 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Erst aus dem Cache antworten, im Hintergrund aktualisieren (stale-while-revalidate)
+// Serve from cache first, refresh in the background (stale-while-revalidate)
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;

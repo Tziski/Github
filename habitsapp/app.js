@@ -1,10 +1,10 @@
-/* auramaxx – dein Lifemaxxing-Tracker
-   Alles läuft im Browser. Daten liegen in localStorage, Fotos in IndexedDB.
-   Aufbau: Helfer → Konstanten → Daten → Berechnungen → Ansichten → Aktionen → Dialoge → Start. */
+/* auramaxx – your lifemaxxing tracker
+   Everything runs in the browser. Data lives in localStorage, photos in IndexedDB.
+   Layout: helpers → constants → data → calculations → views → actions → dialogs → start. */
 (() => {
   'use strict';
 
-  /* ================= Helfer ================= */
+  /* ================= Helpers ================= */
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const pad = n => String(n).padStart(2, '0');
@@ -17,23 +17,23 @@
   const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 864e5);
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const num = (n, d = 0) => Number(n).toLocaleString('de-DE', { maximumFractionDigits: d });
+  const num = (n, d = 0) => Number(n).toLocaleString('en-US', { maximumFractionDigits: d });
   const nowTime = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const reduceMotion = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const numOrNull = v => { if (v === '' || v == null) return null; const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : null; };
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-  const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-  const SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-  const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+  const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const wd = s => (parse(s).getDay() + 6) % 7;
-  const fullDate = s => { const x = parse(s); return `${DAYS[wd(s)]}, ${x.getDate()}. ${MONTHS[x.getMonth()]}`; };
-  const shortDate = s => { const x = parse(s); return `${x.getDate()}.${x.getMonth() + 1}.`; };
+  const fullDate = s => { const x = parse(s); return `${DAYS[wd(s)]}, ${MONTHS[x.getMonth()]} ${x.getDate()}`; };
+  const shortDate = s => { const x = parse(s); return `${MONTHS[x.getMonth()].slice(0, 3)} ${x.getDate()}`; };
   function relLabel(s) {
     const t = todayIso();
-    if (s === t) return 'Heute';
-    if (s === shift(t, -1)) return 'Gestern';
-    if (s === shift(t, -2)) return 'Vorgestern';
+    if (s === t) return 'Today';
+    if (s === shift(t, -1)) return 'Yesterday';
     return `${SHORT[wd(s)]}, ${shortDate(s)}`;
   }
   function weekNo(s) {
@@ -42,13 +42,13 @@
     return 1 + Math.round(((t - j) / 864e5 - 3 + ((j.getDay() + 6) % 7)) / 7);
   }
 
-  /* ================= Konstanten ================= */
+  /* ================= Constants ================= */
   const KEY = 'auramaxx.v1';
   const AURA = { habit: 10, meal: 5, water: 2, workout: 25, checkin: 10, journal: 10, photo: 15 };
   const DAILY_GOAL = 100;
   const LEVELS = [
     [0, 'NPC'], [150, 'Rookie'], [400, 'Locked In'], [900, 'Grinder'],
-    [1800, 'Main Character'], [3500, 'Aura Farmer'], [6500, 'Lifemaxxed'], [11000, 'Legende']
+    [1800, 'Main Character'], [3500, 'Aura Farmer'], [6500, 'Lifemaxxed'], [11000, 'Legend']
   ];
   const CATS = {
     body: { label: 'Body', cls: 'c-body' },
@@ -58,58 +58,58 @@
     social: { label: 'Social', cls: 'c-social' }
   };
   const TEMPLATES = [
-    { emoji: '📖', name: 'Lesen', goal: '20 Minuten', cat: 'mind', perWeek: 7 },
-    { emoji: '🚶', name: '10k Schritte', goal: '10.000 Schritte', cat: 'body', perWeek: 7 },
-    { emoji: '📵', name: 'Handy weg', goal: 'ab 22 Uhr', cat: 'focus', perWeek: 7 },
-    { emoji: '🧊', name: 'Kalt duschen', goal: '2 Minuten', cat: 'body', perWeek: 5 },
-    { emoji: '🧘', name: 'Meditieren', goal: '10 Minuten', cat: 'mind', perWeek: 7 },
-    { emoji: '🌅', name: 'Früh aufstehen', goal: 'vor 7 Uhr', cat: 'focus', perWeek: 5 },
-    { emoji: '✨', name: 'Skincare', goal: 'morgens & abends', cat: 'glow', perWeek: 7 },
-    { emoji: '✍️', name: 'Journaling', goal: '3 Sätze', cat: 'mind', perWeek: 7 },
-    { emoji: '🎯', name: 'Deep Work', goal: '90 Minuten', cat: 'focus', perWeek: 5 },
-    { emoji: '☀️', name: 'Morgenlicht', goal: '10 Minuten draußen', cat: 'body', perWeek: 7 },
-    { emoji: '🛏️', name: 'Bett machen', goal: 'direkt nach dem Aufstehen', cat: 'focus', perWeek: 7 },
-    { emoji: '🗣️', name: 'Jemanden anrufen', goal: 'Familie oder Freunde', cat: 'social', perWeek: 2 },
-    { emoji: '🧠', name: 'Etwas Neues lernen', goal: '15 Minuten', cat: 'mind', perWeek: 5 }
+    { emoji: '📖', name: 'Read', goal: '20 minutes', cat: 'mind', perWeek: 7 },
+    { emoji: '🚶', name: '10k steps', goal: '10,000 steps', cat: 'body', perWeek: 7 },
+    { emoji: '📵', name: 'Phone away', goal: 'after 10 pm', cat: 'focus', perWeek: 7 },
+    { emoji: '🧊', name: 'Cold shower', goal: '2 minutes', cat: 'body', perWeek: 5 },
+    { emoji: '🧘', name: 'Meditate', goal: '10 minutes', cat: 'mind', perWeek: 7 },
+    { emoji: '🌅', name: 'Wake up early', goal: 'before 7 am', cat: 'focus', perWeek: 5 },
+    { emoji: '✨', name: 'Skincare', goal: 'morning & night', cat: 'glow', perWeek: 7 },
+    { emoji: '✍️', name: 'Journal', goal: '3 sentences', cat: 'mind', perWeek: 7 },
+    { emoji: '🎯', name: 'Deep work', goal: '90 minutes', cat: 'focus', perWeek: 5 },
+    { emoji: '☀️', name: 'Morning sunlight', goal: '10 minutes outside', cat: 'body', perWeek: 7 },
+    { emoji: '🛏️', name: 'Make your bed', goal: 'right after waking up', cat: 'focus', perWeek: 7 },
+    { emoji: '🗣️', name: 'Call someone', goal: 'family or friends', cat: 'social', perWeek: 2 },
+    { emoji: '🧠', name: 'Learn something new', goal: '15 minutes', cat: 'mind', perWeek: 5 }
   ];
   const EMOJIS = ['⭐', '💧', '📖', '🚶', '📵', '🧊', '🧘', '🌅', '✨', '✍️', '🎯', '☀️', '🛏️', '🗣️', '🧠', '💪', '🥗', '🦷', '💰', '🎸', '🧹', '🙏'];
   const MEAL_TYPES = [
-    { id: 'breakfast', label: 'Frühstück', e: '🍳' },
-    { id: 'lunch', label: 'Mittag', e: '🥗' },
-    { id: 'dinner', label: 'Abendessen', e: '🍝' },
+    { id: 'breakfast', label: 'Breakfast', e: '🍳' },
+    { id: 'lunch', label: 'Lunch', e: '🥗' },
+    { id: 'dinner', label: 'Dinner', e: '🍝' },
     { id: 'snack', label: 'Snack', e: '🍎' }
   ];
   const MEAL_TAGS = [
-    { id: 'veg', label: 'Gemüse/Obst', e: '🥦' },
-    { id: 'home', label: 'Selbst gekocht', e: '🏠' },
-    { id: 'protein', label: 'Proteinreich', e: '💪' },
-    { id: 'sweet', label: 'Süßes', e: '🍫' },
-    { id: 'fast', label: 'Fast Food', e: '🍔' }
+    { id: 'veg', label: 'Veggies/fruit', e: '🥦' },
+    { id: 'home', label: 'Home-cooked', e: '🏠' },
+    { id: 'protein', label: 'High protein', e: '💪' },
+    { id: 'sweet', label: 'Sweets', e: '🍫' },
+    { id: 'fast', label: 'Fast food', e: '🍔' }
   ];
   const WO_TYPES = [
-    { id: 'strength', label: 'Kraft', e: '🏋️' },
-    { id: 'run', label: 'Laufen', e: '🏃' },
+    { id: 'strength', label: 'Strength', e: '🏋️' },
+    { id: 'run', label: 'Running', e: '🏃' },
     { id: 'cardio', label: 'Cardio', e: '🚴' },
-    { id: 'sport', label: 'Sport', e: '⚽' },
+    { id: 'sport', label: 'Sports', e: '⚽' },
     { id: 'mobility', label: 'Mobility', e: '🧘' },
-    { id: 'walk', label: 'Spaziergang', e: '🚶' }
+    { id: 'walk', label: 'Walk', e: '🚶' }
   ];
   const DIST_TYPES = ['run', 'cardio', 'walk'];
   const MOODS = [
-    { e: '😩', l: 'Sehr schlecht' }, { e: '😕', l: 'Eher schlecht' }, { e: '😐', l: 'Okay' },
-    { e: '🙂', l: 'Gut' }, { e: '🤩', l: 'Richtig gut' }
+    { e: '😩', l: 'Awful' }, { e: '😕', l: 'Meh' }, { e: '😐', l: 'Okay' },
+    { e: '🙂', l: 'Good' }, { e: '🤩', l: 'Amazing' }
   ];
-  const EXERCISES = ['Bankdrücken', 'Kniebeugen', 'Kreuzheben', 'Schulterdrücken', 'Klimmzüge', 'Liegestütze', 'Rudern', 'Latziehen', 'Bizepscurls', 'Trizepsdrücken', 'Dips', 'Ausfallschritte', 'Beinpresse', 'Hip Thrust', 'Seitheben', 'Plank'];
+  const EXERCISES = ['Bench press', 'Squat', 'Deadlift', 'Overhead press', 'Pull-ups', 'Push-ups', 'Rows', 'Lat pulldown', 'Bicep curls', 'Tricep pushdown', 'Dips', 'Lunges', 'Leg press', 'Hip thrust', 'Lateral raises', 'Plank'];
   const mealType = id => MEAL_TYPES.find(t => t.id === id) || MEAL_TYPES[3];
   const woType = id => WO_TYPES.find(t => t.id === id) || WO_TYPES[0];
 
-  /* ================= Daten ================= */
+  /* ================= Data ================= */
   const fresh = () => ({ v: 1, profile: null, habits: [], days: {}, photos: [], settings: { theme: 'auto' }, lastLevel: null });
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) { const p = JSON.parse(raw); if (p && p.v === 1) return Object.assign(fresh(), p); }
-    } catch (e) { /* ignorieren */ }
+    } catch (e) { /* ignore */ }
     return fresh();
   }
   let S = load();
@@ -117,7 +117,7 @@
   function save() {
     clearTimeout(saveTimer);
     try { localStorage.setItem(KEY, JSON.stringify(S)); }
-    catch (e) { toast('Speichern hat nicht geklappt. Ist der Speicher voll?'); }
+    catch (e) { toast('Could not save. Is your storage full?'); }
   }
   const goals = () => Object.assign({ water: 8, protein: 0, workouts: 3 }, S.profile && S.profile.goals);
   const getDay = d => S.days[d] || { water: 0, meals: [], workouts: [] };
@@ -129,7 +129,7 @@
   const findHabit = id => S.habits.find(h => h.id === id);
   const newHabit = t => ({ id: uid(), emoji: t.emoji || '⭐', name: t.name, goal: t.goal || '', cat: t.cat || 'mind', perWeek: t.perWeek || 7, done: [], created: todayIso() });
 
-  /* Fotos in IndexedDB */
+  /* Photos in IndexedDB */
   const idb = (() => {
     let p = null;
     const open = () => p || (p = new Promise((res, rej) => {
@@ -157,7 +157,7 @@
     const u = URL.createObjectURL(b); photoURLs.set(id, u); return u;
   }
 
-  /* ================= Berechnungen ================= */
+  /* ================= Calculations ================= */
   const has = (h, d) => h.done.indexOf(d) !== -1;
   function toggleDone(h, d) { const i = h.done.indexOf(d); if (i < 0) { h.done.push(d); return true; } h.done.splice(i, 1); return false; }
   function countWeek(h, d) { const m = mondayOf(d); let c = 0; for (let i = 0; i < 7; i++) if (has(h, shift(m, i))) c++; return c; }
@@ -172,13 +172,13 @@
     if (h.perWeek >= 7) {
       let d = has(h, t) ? t : shift(t, -1);
       while (has(h, d) && n < 3650) { n++; d = shift(d, -1); }
-      return { n, unit: n === 1 ? 'Tag' : 'Tage' };
+      return { n, unit: n === 1 ? 'day' : 'days' };
     }
     let w = mondayOf(t);
     if (countWeek(h, w) >= h.perWeek) n++;
     w = shift(w, -7);
     while (countWeek(h, w) >= h.perWeek && n < 520) { n++; w = shift(w, -7); }
-    return { n, unit: n === 1 ? 'Woche' : 'Wochen' };
+    return { n, unit: n === 1 ? 'week' : 'weeks' };
   }
   function auraFor(d) {
     const x = getDay(d); const G = goals(); let a = 0;
@@ -256,21 +256,21 @@
   }
   function exSummary(e) {
     let s = e.name;
-    if (e.sets && e.reps) s += ` ${e.sets}×${e.reps}`; else if (e.sets) s += ` ${e.sets} Sätze`; else if (e.reps) s += ` ${e.reps} Wdh.`;
+    if (e.sets && e.reps) s += ` ${e.sets}×${e.reps}`; else if (e.sets) s += ` ${e.sets} sets`; else if (e.reps) s += ` ${e.reps} reps`;
     if (e.kg) s += ` · ${num(e.kg, 1)} kg`;
     return s;
   }
   function greeting() {
     const h = new Date().getHours();
-    return h < 5 ? 'Noch wach' : h < 11 ? 'Guten Morgen' : h < 17 ? 'Hey' : h < 22 ? 'Guten Abend' : 'Gute Nacht';
+    return h < 5 ? 'Still up' : h < 11 ? 'Good morning' : h < 17 ? 'Hey' : h < 22 ? 'Good evening' : 'Good night';
   }
 
-  /* ================= Zustand der Oberfläche ================= */
+  /* ================= UI state ================= */
   let view = 'today';
   let viewDate = todayIso();
   let lastToday = todayIso();
 
-  /* ================= Bausteine ================= */
+  /* ================= Building blocks ================= */
   const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   function ring(p, label, big, sub) {
     const v = clamp(p, 0, 1) * 100;
@@ -281,7 +281,7 @@
   }
   const bar = (p, cls = '') => `<div class="bar ${cls}" aria-hidden="true"><i style="width:${(clamp(p, 0, 1) * 100).toFixed(1)}%"></i></div>`;
   const emptyState = (e, t) => `<div class="empty"><span class="e" aria-hidden="true">${e}</span>${t}</div>`;
-  function freqLabel(n) { return n >= 7 ? 'täglich' : n === 1 ? '1× pro Woche' : `${n}× pro Woche`; }
+  function freqLabel(n) { return n >= 7 ? 'daily' : `${n}× a week`; }
 
   function habitRow(h, d, withWeek) {
     const on = has(h, d), s = habitStreak(h), c = CATS[h.cat] || CATS.mind;
@@ -292,45 +292,45 @@
         const di = shift(m, i), dn = has(h, di), fut = di > t;
         cells += `<button type="button" class="d${dn ? ' done' : ''}${di === d ? ' sel' : ''}" data-action="day-toggle" data-id="${h.id}" data-date="${di}" data-k="dt-${h.id}-${i}" aria-pressed="${dn}" aria-label="${esc(h.name)}, ${DAYS[i]} ${shortDate(di)}"${fut ? ' disabled' : ''}><i></i><span aria-hidden="true">${SHORT[i]}</span></button>`;
       }
-      week = `<div class="days">${cells}</div>` + (h.perWeek < 7 ? `<p class="week-note">${countWeek(h, d)} von ${h.perWeek} diese Woche</p>` : '');
+      week = `<div class="days">${cells}</div>` + (h.perWeek < 7 ? `<p class="week-note">${countWeek(h, d)} of ${h.perWeek} this week</p>` : '');
     }
     return `<li class="habit">
-      <button type="button" class="tick" data-action="tick" data-id="${h.id}" data-k="tk-${h.id}" aria-pressed="${on}" aria-label="${esc(h.name)} erledigt">${CHECK}</button>
-      <button type="button" class="meta" data-action="edit-habit" data-id="${h.id}" data-k="ed-${h.id}" aria-label="${esc(h.name)} bearbeiten">
+      <button type="button" class="tick" data-action="tick" data-id="${h.id}" data-k="tk-${h.id}" aria-pressed="${on}" aria-label="${esc(h.name)} done">${CHECK}</button>
+      <button type="button" class="meta" data-action="edit-habit" data-id="${h.id}" data-k="ed-${h.id}" aria-label="Edit ${esc(h.name)}">
         <span class="h-name"><span aria-hidden="true">${esc(h.emoji)}</span> ${esc(h.name)}</span>
         <span class="h-goal ${c.cls}"><span class="dot"></span>${esc(h.goal || freqLabel(h.perWeek))}${h.goal ? ' · ' + freqLabel(h.perWeek) : ''}</span>
       </button>
-      <div class="streak"><b aria-hidden="true">${s.n}</b><span aria-hidden="true">🔥 ${s.unit}</span><span class="sr-only">Serie: ${s.n} ${s.unit}</span></div>
+      <div class="streak"><b aria-hidden="true">${s.n}</b><span aria-hidden="true">🔥 ${s.unit}</span><span class="sr-only">Streak: ${s.n} ${s.unit}</span></div>
       ${week}
     </li>`;
   }
 
-  /* ================= Ansicht: Heute ================= */
+  /* ================= View: Today ================= */
   function heroHTML(d) {
     const a = auraFor(d), streak = docStreak(), isT = d === todayIso();
     const due = S.habits.filter(h => dueOn(h, d)), doneN = due.filter(h => has(h, d)).length;
     const name = S.profile && S.profile.name ? `, ${esc(S.profile.name)}` : '';
-    const note = a >= DAILY_GOAL ? 'Tagesziel geknackt. Aura maxxed. ✨' : `Noch ${DAILY_GOAL - a} Aura bis zum Tagesziel`;
+    const note = a >= DAILY_GOAL ? 'Daily goal crushed. Aura maxxed. ✨' : `${DAILY_GOAL - a} Aura to go for today’s goal`;
     return `<div>
-        <p class="eyebrow">${isT ? greeting() + name : 'Rückblick' + name}</p>
+        <p class="eyebrow">${isT ? greeting() + name : 'Looking back' + name}</p>
         <h1 class="display">Day ${dayNumber(d)}</h1>
         <p class="goal-note">${note}</p>
         <div class="pills">
-          <span class="pill">🔥 ${streak} ${streak === 1 ? 'Tag' : 'Tage'} Serie</span>
-          <span class="pill">✅ ${doneN}/${due.length} Habits</span>
+          <span class="pill">🔥 ${plural(streak, 'day', 'days')} streak</span>
+          <span class="pill">✅ ${doneN}/${due.length} habits</span>
         </div>
       </div>
-      ${ring(a / DAILY_GOAL, `${a} von ${DAILY_GOAL} Aura`, a, 'Aura')}`;
+      ${ring(a / DAILY_GOAL, `${a} of ${DAILY_GOAL} Aura`, a, 'Aura')}`;
   }
   function dayLog(d) {
     const x = getDay(d), out = [];
     x.meals.forEach(m => out.push({ t: m.time, e: mealType(m.type).e, txt: m.name, sub: mealType(m.type).label }));
-    x.workouts.forEach(w => out.push({ t: w.time, e: woType(w.type).e, txt: `${woType(w.type).label}, ${w.duration} Min.`, sub: w.distance ? `${num(w.distance, 1)} km` : '' }));
+    x.workouts.forEach(w => out.push({ t: w.time, e: woType(w.type).e, txt: `${woType(w.type).label}, ${w.duration} min`, sub: w.distance ? `${num(w.distance, 1)} km` : '' }));
     S.habits.filter(h => has(h, d)).forEach(h => out.push({ t: '', e: h.emoji, txt: h.name, sub: 'Habit' }));
-    if (x.water) out.push({ t: '', e: '💧', txt: `${x.water} ${x.water === 1 ? 'Glas' : 'Gläser'} Wasser`, sub: '' });
-    if (x.mood) out.push({ t: '', e: MOODS[x.mood - 1].e, txt: `Check-in: ${MOODS[x.mood - 1].l}`, sub: x.sleep != null ? `${num(x.sleep, 1)} h Schlaf` : '' });
-    if ((x.win || '').trim()) out.push({ t: '', e: '🏆', txt: x.win.trim(), sub: 'Win des Tages' });
-    S.photos.filter(p => p.date === d).forEach(() => out.push({ t: '', e: '📸', txt: 'Fortschrittsfoto', sub: '' }));
+    if (x.water) out.push({ t: '', e: '💧', txt: `${plural(x.water, 'glass', 'glasses')} of water`, sub: '' });
+    if (x.mood) out.push({ t: '', e: MOODS[x.mood - 1].e, txt: `Check-in: ${MOODS[x.mood - 1].l}`, sub: x.sleep != null ? `${num(x.sleep, 1)} h sleep` : '' });
+    if ((x.win || '').trim()) out.push({ t: '', e: '🏆', txt: x.win.trim(), sub: 'Win of the day' });
+    S.photos.filter(p => p.date === d).forEach(() => out.push({ t: '', e: '📸', txt: 'Progress photo', sub: '' }));
     return out.sort((a, b) => (a.t || '99:99').localeCompare(b.t || '99:99'));
   }
   function renderToday() {
@@ -338,79 +338,80 @@
     const due = S.habits.filter(h => dueOn(h, d));
     const log = dayLog(d);
     const moodBtns = MOODS.map((m, i) => `<button type="button" data-action="mood" data-v="${i + 1}" data-k="mood-${i + 1}" aria-pressed="${x.mood === i + 1}" aria-label="${m.l}"><span aria-hidden="true">${m.e}</span></button>`).join('');
-    const energyBtns = [1, 2, 3, 4, 5].map(v => `<button type="button" data-action="energy" data-v="${v}" data-k="en-${v}" aria-pressed="${x.energy === v}" aria-label="Energie ${v} von 5">${v}</button>`).join('');
+    const energyBtns = [1, 2, 3, 4, 5].map(v => `<button type="button" data-action="energy" data-v="${v}" data-k="en-${v}" aria-pressed="${x.energy === v}" aria-label="Energy ${v} of 5">${v}</button>`).join('');
+    const photosToday = S.photos.filter(p => p.date === d).length;
     $('#view-today').innerHTML = `
       <section class="card hero" id="todayHero" aria-live="polite">${heroHTML(d)}</section>
 
-      <section aria-label="Schnell eintragen">
+      <section aria-label="Quick log">
         <div class="quick">
-          <button type="button" data-action="add-meal" data-k="q-meal"><span class="qe" aria-hidden="true">🍽️</span>Essen<small>${x.meals.length} heute</small></button>
-          <button type="button" data-action="water-delta" data-v="1" data-k="q-water" aria-label="Ein Glas Wasser trinken, ${x.water} von ${G.water}"><span class="qe" aria-hidden="true">💧</span>Wasser<small aria-hidden="true">${x.water}/${G.water}</small></button>
-          <button type="button" data-action="add-workout" data-k="q-wo"><span class="qe" aria-hidden="true">🏋️</span>Training<small>${minutesOf(x) ? minutesOf(x) + ' Min.' : '–'}</small></button>
-          <button type="button" data-action="goto-checkin" data-k="q-ci"><span class="qe" aria-hidden="true">🧠</span>Check-in<small>${x.mood ? MOODS[x.mood - 1].e : 'offen'}</small></button>
-          <button type="button" data-action="add-photo" data-k="q-ph"><span class="qe" aria-hidden="true">📸</span>Foto<small>${S.photos.filter(p => p.date === d).length || '–'}</small></button>
+          <button type="button" data-action="add-meal" data-k="q-meal"><span class="qe" aria-hidden="true">🍽️</span>Food<small>${x.meals.length} today</small></button>
+          <button type="button" data-action="water-delta" data-v="1" data-k="q-water" aria-label="Drink a glass of water, ${x.water} of ${G.water}"><span class="qe" aria-hidden="true">💧</span>Water<small aria-hidden="true">${x.water}/${G.water}</small></button>
+          <button type="button" data-action="add-workout" data-k="q-wo"><span class="qe" aria-hidden="true">🏋️</span>Workout<small>${minutesOf(x) ? minutesOf(x) + ' min' : '–'}</small></button>
+          <button type="button" data-action="goto-checkin" data-k="q-ci"><span class="qe" aria-hidden="true">🧠</span>Check-in<small>${x.mood ? MOODS[x.mood - 1].e : 'open'}</small></button>
+          <button type="button" data-action="add-photo" data-k="q-ph"><span class="qe" aria-hidden="true">📸</span>Photo<small>${photosToday || '–'}</small></button>
         </div>
       </section>
 
       <section class="card" aria-labelledby="h-th">
-        <div class="sec-head"><h2 id="h-th">Habits</h2><button type="button" class="link" data-action="nav" data-view="habits">Alle ansehen</button></div>
+        <div class="sec-head"><h2 id="h-th">Habits</h2><button type="button" class="link" data-action="nav" data-view="habits">See all</button></div>
         ${due.length ? `<ul class="hlist compact">${due.map(h => habitRow(h, d, false)).join('')}</ul>`
-          : emptyState('🌱', S.habits.length ? 'Für diesen Tag ist nichts geplant.' : 'Noch keine Habits. Leg im Tab „Habits“ los.')}
+          : emptyState('🌱', S.habits.length ? 'Nothing planned for this day.' : 'No habits yet. Get started in the Habits tab.')}
       </section>
 
       <section class="card" id="checkin" aria-labelledby="h-ci">
         <h2 id="h-ci">Check-in</h2>
-        <div class="q"><p class="q-label" id="l-mood">Wie fühlst du dich?</p><div class="seg5" role="group" aria-labelledby="l-mood">${moodBtns}</div></div>
-        <div class="q"><p class="q-label" id="l-en">Energie</p><div class="seg5 num" role="group" aria-labelledby="l-en">${energyBtns}</div></div>
-        <div class="q"><p class="q-label" id="l-sl">Schlaf letzte Nacht</p>
+        <div class="q"><p class="q-label" id="l-mood">How are you feeling?</p><div class="seg5" role="group" aria-labelledby="l-mood">${moodBtns}</div></div>
+        <div class="q"><p class="q-label" id="l-en">Energy</p><div class="seg5 num" role="group" aria-labelledby="l-en">${energyBtns}</div></div>
+        <div class="q"><p class="q-label" id="l-sl">Sleep last night</p>
           <div class="stepper" role="group" aria-labelledby="l-sl">
-            <button type="button" class="icon-btn" data-action="sleep" data-v="-0.5" data-k="sl-m" aria-label="Eine halbe Stunde weniger">−</button>
+            <button type="button" class="icon-btn" data-action="sleep" data-v="-0.5" data-k="sl-m" aria-label="Half an hour less">−</button>
             <output aria-live="polite">${x.sleep != null ? num(x.sleep, 1) + ' h' : '– h'}</output>
-            <button type="button" class="icon-btn" data-action="sleep" data-v="0.5" data-k="sl-p" aria-label="Eine halbe Stunde mehr">+</button>
+            <button type="button" class="icon-btn" data-action="sleep" data-v="0.5" data-k="sl-p" aria-label="Half an hour more">+</button>
           </div>
         </div>
-        <div class="q"><label class="field">🏆 Win des Tages
-          <input type="text" data-field="win" data-k="f-win" maxlength="120" placeholder="Was lief heute gut?" value="${esc(x.win || '')}" autocomplete="off"></label></div>
+        <div class="q"><label class="field">🏆 Win of the day
+          <input type="text" data-field="win" data-k="f-win" maxlength="120" placeholder="What went well today?" value="${esc(x.win || '')}" autocomplete="off"></label></div>
         <div class="q"><label class="field">📝 Journal
-          <textarea data-field="journal" data-k="f-jr" rows="3" maxlength="3000" placeholder="Gedanken, Learnings, wofür du dankbar bist …">${esc(x.journal || '')}</textarea></label></div>
+          <textarea data-field="journal" data-k="f-jr" rows="3" maxlength="3000" placeholder="Thoughts, lessons, what you’re grateful for …">${esc(x.journal || '')}</textarea></label></div>
       </section>
 
       <section class="card" aria-labelledby="h-log">
-        <div class="sec-head"><h2 id="h-log">Dein Log</h2><span class="muted small">${log.length} ${log.length === 1 ? 'Eintrag' : 'Einträge'}</span></div>
+        <div class="sec-head"><h2 id="h-log">Your log</h2><span class="muted small">${plural(log.length, 'entry', 'entries')}</span></div>
         ${log.length ? `<ul class="log">${log.map(l => `<li>${l.t ? `<time>${esc(l.t)}</time>` : '<span class="nt" aria-hidden="true">•</span>'}<span class="le" aria-hidden="true">${esc(l.e)}</span><span>${esc(l.txt)}${l.sub ? ` <small>· ${esc(l.sub)}</small>` : ''}</span></li>`).join('')}</ul>`
-          : emptyState('🗒️', 'Noch nichts dokumentiert. Fang klein an: ein Glas Wasser zählt.')}
+          : emptyState('🗒️', 'Nothing logged yet. Start small: one glass of water counts.')}
       </section>
 
-      <button type="button" class="btn btn-primary wide" data-action="share" data-k="share">📲 Tageskarte für TikTok erstellen</button>`;
+      <button type="button" class="btn btn-primary wide" data-action="share" data-k="share">📲 Create your TikTok day card</button>`;
   }
 
-  /* ================= Ansicht: Habits ================= */
+  /* ================= View: Habits ================= */
   function renderHabits() {
     const d = viewDate;
     const names = new Set(S.habits.map(h => h.name.trim().toLowerCase()));
     const ideas = TEMPLATES.map((t, i) => ({ t, i })).filter(o => !names.has(o.t.name.toLowerCase()));
     const done = S.habits.filter(h => has(h, d)).length;
     $('#view-habits').innerHTML = `
-      <div class="view-head"><h1>Habits</h1><button type="button" class="btn btn-primary sm" data-action="new-habit" data-k="nh">+ Neu</button></div>
-      <p class="view-sub">Woche ${weekNo(d)} · ${done} von ${S.habits.length} erledigt. Tippe auf einen Wochentag, um ihn nachzutragen.</p>
+      <div class="view-head"><h1>Habits</h1><button type="button" class="btn btn-primary sm" data-action="new-habit" data-k="nh">+ New</button></div>
+      <p class="view-sub">Week ${weekNo(d)} · ${done} of ${S.habits.length} done. Tap a weekday to log it after the fact.</p>
       <section class="card">
         ${S.habits.length ? `<ul class="hlist">${S.habits.map(h => habitRow(h, d, true)).join('')}</ul>`
-          : emptyState('🌱', 'Noch keine Habits. Wähl unten eine Idee oder erstelle deinen eigenen.')}
+          : emptyState('🌱', 'No habits yet. Pick an idea below or create your own.')}
       </section>
-      ${ideas.length ? `<section class="card" aria-labelledby="h-ideas"><h2 id="h-ideas">Ideen zum Lifemaxxen</h2>
-        <div class="chips">${ideas.map(o => `<button type="button" class="chip" data-action="add-template" data-i="${o.i}" data-k="tpl-${o.i}" aria-label="${esc(o.t.name)} hinzufügen"><span aria-hidden="true">${o.t.emoji}</span>${esc(o.t.name)}<span class="plus" aria-hidden="true">+</span></button>`).join('')}</div></section>` : ''}
-      <p class="hint">Tipp: Lieber 3 Habits jeden Tag als 10 Habits, die du nach einer Woche wieder lässt. Ruhetage sind Teil vom Plan.</p>`;
+      ${ideas.length ? `<section class="card" aria-labelledby="h-ideas"><h2 id="h-ideas">Lifemaxxing ideas</h2>
+        <div class="chips">${ideas.map(o => `<button type="button" class="chip" data-action="add-template" data-i="${o.i}" data-k="tpl-${o.i}" aria-label="Add ${esc(o.t.name)}"><span aria-hidden="true">${o.t.emoji}</span>${esc(o.t.name)}<span class="plus" aria-hidden="true">+</span></button>`).join('')}</div></section>` : ''}
+      <p class="hint">Tip: 3 habits every day beat 10 habits you drop after a week. Rest days are part of the plan.</p>`;
   }
 
-  /* ================= Ansicht: Essen ================= */
+  /* ================= View: Food ================= */
   function renderFood() {
     const d = viewDate, x = getDay(d), G = goals();
     const glasses = Math.max(G.water, x.water);
     let gl = '';
-    for (let i = 0; i < glasses; i++) gl += `<button type="button" class="glass${i < x.water ? ' full' : ''}" data-action="water-set" data-v="${i + 1}" data-k="gl-${i}" aria-label="${i + 1} ${i ? 'Gläser' : 'Glas'}" aria-pressed="${i < x.water}"></button>`;
+    for (let i = 0; i < glasses; i++) gl += `<button type="button" class="glass${i < x.water ? ' full' : ''}" data-action="water-set" data-v="${i + 1}" data-k="gl-${i}" aria-label="${plural(i + 1, 'glass', 'glasses')}" aria-pressed="${i < x.water}"></button>`;
     const prot = proteinOf(x), kcal = kcalOf(x);
     const groups = MEAL_TYPES.map(t => ({ t, list: x.meals.filter(m => m.type === t.id) })).filter(g => g.list.length);
-    // Wochenrückblick: die 7 Tage bis zum gewählten Tag
+    // Weekly recap: the 7 days up to the selected day
     let wWater = 0, wProt = 0, wProtDays = 0, wVeg = 0, wHome = 0, wMeals = 0;
     for (let i = 0; i < 7; i++) {
       const y = getDay(shift(d, -i)); wWater += y.water || 0; wMeals += y.meals.length;
@@ -418,45 +419,45 @@
       y.meals.forEach(m => { if ((m.tags || []).includes('veg')) wVeg++; if ((m.tags || []).includes('home')) wHome++; });
     }
     $('#view-food').innerHTML = `
-      <div class="view-head"><h1>Essen</h1><button type="button" class="btn btn-primary sm" data-action="add-meal" data-k="am">+ Mahlzeit</button></div>
+      <div class="view-head"><h1>Food</h1><button type="button" class="btn btn-primary sm" data-action="add-meal" data-k="am">+ Meal</button></div>
       <section class="card" aria-labelledby="h-water">
-        <div class="sec-head"><h2 id="h-water">💧 Wasser</h2><span class="big-num">${num(x.water * 0.25, 2)} l</span></div>
-        <div class="glasses" role="group" aria-label="Wasser: ${x.water} von ${G.water} Gläsern. Tippe ein Glas an, um den Stand zu setzen.">${gl}</div>
+        <div class="sec-head"><h2 id="h-water">💧 Water</h2><span class="big-num">${num(x.water * 0.25, 2)} L</span></div>
+        <div class="glasses" role="group" aria-label="Water: ${x.water} of ${G.water} glasses. Tap a glass to set the count.">${gl}</div>
         <div class="row-between">
-          <button type="button" class="icon-btn" data-action="water-delta" data-v="-1" data-k="w-m" aria-label="Ein Glas weniger"${x.water ? '' : ' disabled'}>−</button>
-          <span class="muted small">${x.water} von ${G.water} Gläsern à 250 ml</span>
-          <button type="button" class="icon-btn" data-action="water-delta" data-v="1" data-k="w-p" aria-label="Ein Glas mehr">+</button>
+          <button type="button" class="icon-btn" data-action="water-delta" data-v="-1" data-k="w-m" aria-label="One glass less"${x.water ? '' : ' disabled'}>−</button>
+          <span class="muted small">${x.water} of ${G.water} glasses (250 ml each)</span>
+          <button type="button" class="icon-btn" data-action="water-delta" data-v="1" data-k="w-p" aria-label="One glass more">+</button>
         </div>
       </section>
       ${G.protein > 0 ? `<section class="card" aria-labelledby="h-prot">
         <div class="sec-head"><h2 id="h-prot">💪 Protein</h2><span class="big-num">${num(prot)} <span class="muted small">/ ${G.protein} g</span></span></div>
         ${bar(prot / G.protein)}
-        <p class="hint" style="margin-top:8px">${prot >= G.protein ? 'Ziel erreicht. Stark.' : `Noch ${num(G.protein - prot)} g bis zum Ziel.`}${kcal ? ` · ${num(kcal)} kcal eingetragen` : ''}</p>
+        <p class="hint" style="margin-top:8px">${prot >= G.protein ? 'Goal reached. Strong.' : `${num(G.protein - prot)} g to go.`}${kcal ? ` · ${num(kcal)} kcal logged` : ''}</p>
       </section>` : ''}
       <section class="card" aria-labelledby="h-meals">
-        <div class="sec-head"><h2 id="h-meals">Mahlzeiten</h2><span class="muted small">${x.meals.length} eingetragen${!G.protein && kcal ? ` · ${num(kcal)} kcal` : ''}</span></div>
+        <div class="sec-head"><h2 id="h-meals">Meals</h2><span class="muted small">${x.meals.length} logged${!G.protein && kcal ? ` · ${num(kcal)} kcal` : ''}</span></div>
         ${groups.length ? groups.map(g => `<p class="group-label">${g.t.label}</p><ul class="items">${g.list.map(m => `<li>
             <button type="button" class="item" data-action="edit-meal" data-id="${m.id}" data-k="ml-${m.id}">
               <span class="ic" aria-hidden="true">${g.t.e}</span>
               <span style="min-width:0"><b>${esc(m.name)}</b><small>${esc(m.time || '')}${(m.tags || []).length ? ' · ' + m.tags.map(t => (MEAL_TAGS.find(z => z.id === t) || {}).label).filter(Boolean).join(', ') : ''}</small></span>
               <span class="side">${m.protein ? num(m.protein) + ' g' : ''}${m.kcal ? `<small>${num(m.kcal)} kcal</small>` : ''}</span>
             </button></li>`).join('')}</ul>`).join('')
-          : emptyState('🍽️', 'Noch nichts eingetragen. Fotografier dein Essen nicht nur, schreib’s auch auf.')}
+          : emptyState('🍽️', 'Nothing logged yet. Don’t just photograph your food, write it down too.')}
       </section>
       <section class="card" aria-labelledby="h-fw">
-        <h2 id="h-fw">Letzte 7 Tage</h2>
+        <h2 id="h-fw">Last 7 days</h2>
         <div class="stats three">
-          <div class="stat"><b>${num(wWater / 7 * 0.25, 1)} l</b><span>Ø Wasser</span></div>
-          <div class="stat"><b>${wProtDays ? num(wProt / wProtDays) + ' g' : '–'}</b><span>Ø Protein</span></div>
-          <div class="stat"><b>${wMeals}</b><span>Mahlzeiten</span></div>
-          <div class="stat"><b>${wVeg}</b><span>mit Gemüse/Obst</span></div>
-          <div class="stat"><b>${wHome}</b><span>selbst gekocht</span></div>
-          <div class="stat"><b>${wMeals ? Math.round((wVeg / wMeals) * 100) + ' %' : '–'}</b><span>Gemüse-Quote</span></div>
+          <div class="stat"><b>${num(wWater / 7 * 0.25, 1)} L</b><span>avg water</span></div>
+          <div class="stat"><b>${wProtDays ? num(wProt / wProtDays) + ' g' : '–'}</b><span>avg protein</span></div>
+          <div class="stat"><b>${wMeals}</b><span>meals</span></div>
+          <div class="stat"><b>${wVeg}</b><span>with veggies/fruit</span></div>
+          <div class="stat"><b>${wHome}</b><span>home-cooked</span></div>
+          <div class="stat"><b>${wMeals ? Math.round((wVeg / wMeals) * 100) + '%' : '–'}</b><span>veggie rate</span></div>
         </div>
       </section>`;
   }
 
-  /* ================= Ansicht: Training ================= */
+  /* ================= View: Training ================= */
   function renderTrain() {
     const d = viewDate, x = getDay(d), G = goals(), m = mondayOf(d);
     const mins = [], sessions = [];
@@ -468,29 +469,29 @@
         <span class="ic" aria-hidden="true">${woType(w.type).e}</span>
         <span style="min-width:0"><b>${woType(w.type).label}${w.distance ? ` · ${num(w.distance, 1)} km` : ''}</b>
           <small>${date !== d ? relLabel(date) + ' · ' : ''}${esc(w.time || '')}${(w.exercises || []).length ? ' · ' + esc(w.exercises.map(exSummary).join(', ')) : w.note ? ' · ' + esc(w.note) : ''}</small></span>
-        <span class="side">${w.duration} Min.<small>${'●'.repeat(w.intensity || 0)}${'○'.repeat(5 - (w.intensity || 0))}</small></span>
+        <span class="side">${w.duration} min<small>${'●'.repeat(w.intensity || 0)}${'○'.repeat(5 - (w.intensity || 0))}</small></span>
       </button></li>`;
     $('#view-train').innerHTML = `
-      <div class="view-head"><h1>Training</h1><button type="button" class="btn btn-primary sm" data-action="add-workout" data-k="aw">+ Training</button></div>
+      <div class="view-head"><h1>Training</h1><button type="button" class="btn btn-primary sm" data-action="add-workout" data-k="aw">+ Workout</button></div>
       <section class="card" aria-labelledby="h-tw">
         <h2 id="h-tw">${relLabel(d)}</h2>
         ${x.workouts.length ? `<ul class="items">${x.workouts.map(w => woItem(w, d)).join('')}</ul>`
-          : emptyState('🏋️', d === todayIso() ? 'Heute noch kein Training. Auch ein Spaziergang zählt.' : 'An diesem Tag kein Training eingetragen.')}
+          : emptyState('🏋️', d === todayIso() ? 'No workout yet today. A walk counts too.' : 'No workout logged on this day.')}
       </section>
       <section class="card" aria-labelledby="h-wk">
-        <div class="sec-head"><h2 id="h-wk">Woche ${weekNo(d)}</h2><span class="muted small">${wkSessions} von ${G.workouts} Trainings · ${wkMin} Min.</span></div>
+        <div class="sec-head"><h2 id="h-wk">Week ${weekNo(d)}</h2><span class="muted small">${wkSessions} of ${G.workouts} workouts · ${wkMin} min</span></div>
         ${bar(wkSessions / G.workouts)}
-        <div class="wbars" role="img" aria-label="Trainingsminuten pro Tag: ${mins.map((v, i) => `${DAYS[i]} ${v}`).join(', ')}" style="margin-top:16px">${bars}</div>
+        <div class="wbars" role="img" aria-label="Workout minutes per day: ${mins.map((v, i) => `${DAYS[i]} ${v}`).join(', ')}" style="margin-top:16px">${bars}</div>
       </section>
       <section class="card" aria-labelledby="h-pr">
-        <h2 id="h-pr">🏆 Bestleistungen</h2>
-        ${prs.length ? `<ul class="items">${prs.map(p => `<li><div class="item" style="cursor:default"><span class="ic" aria-hidden="true">💪</span><span style="min-width:0"><b>${esc(p.name)}</b><small>${shortDate(p.d)}${p.reps ? ` · ${p.reps} Wdh.` : ''}</small></span><span class="side">${num(p.kg, 1)} kg</span></div></li>`).join('')}</ul>`
-          : emptyState('📈', 'Trag Kraftübungen mit Gewicht ein. Neue Bestleistungen feiern wir automatisch.')}
+        <h2 id="h-pr">🏆 Personal records</h2>
+        ${prs.length ? `<ul class="items">${prs.map(p => `<li><div class="item" style="cursor:default"><span class="ic" aria-hidden="true">💪</span><span style="min-width:0"><b>${esc(p.name)}</b><small>${shortDate(p.d)}${p.reps ? ` · ${p.reps} reps` : ''}</small></span><span class="side">${num(p.kg, 1)} kg</span></div></li>`).join('')}</ul>`
+          : emptyState('📈', 'Log strength exercises with weight. New PRs get celebrated automatically.')}
       </section>
-      ${hist.length ? `<section class="card" aria-labelledby="h-hist"><h2 id="h-hist">Letzte Trainings</h2><ul class="items">${hist.map(o => woItem(o.w, o.d)).join('')}</ul></section>` : ''}`;
+      ${hist.length ? `<section class="card" aria-labelledby="h-hist"><h2 id="h-hist">Recent workouts</h2><ul class="items">${hist.map(o => woItem(o.w, o.d)).join('')}</ul></section>` : ''}`;
   }
 
-  /* ================= Ansicht: Fortschritt ================= */
+  /* ================= View: Progress ================= */
   function heatmapHTML() {
     const t = todayIso(), start = shift(mondayOf(t), -77); let cells = '', docDays = 0;
     for (let i = 0; i < 84; i++) {
@@ -500,8 +501,8 @@
       const l = a === 0 ? '' : a < 30 ? 'l1' : a < 60 ? 'l2' : a < DAILY_GOAL ? 'l3' : 'l4';
       cells += `<i class="${l}${d === t ? ' now' : ''}" title="${shortDate(d)}: ${a} Aura"></i>`;
     }
-    return `<div class="heat" role="img" aria-label="In den letzten 12 Wochen an ${docDays} Tagen dokumentiert">${cells}</div>
-      <div class="legend" aria-hidden="true">weniger <i style="background:var(--surface-2)"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> mehr</div>`;
+    return `<div class="heat" role="img" aria-label="Logged on ${plural(docDays, 'day', 'days')} in the last 12 weeks">${cells}</div>
+      <div class="legend" aria-hidden="true">less <i style="background:var(--surface-2)"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> more</div>`;
   }
   function chartHTML() {
     const t = todayIso(), pts = [];
@@ -515,17 +516,17 @@
     const moods = pts.filter(p => p.mood), sleeps = pts.filter(p => p.sleep != null);
     const am = moods.length ? moods.reduce((s, p) => s + p.mood, 0) / moods.length : null;
     const as = sleeps.length ? sleeps.reduce((s, p) => s + p.sleep, 0) / sleeps.length : null;
-    if (!moods.length && !sleeps.length) return emptyState('📉', 'Mach ein paar Tage den Check-in. Dann siehst du hier, wie Stimmung und Schlaf zusammenhängen.');
-    const label = `Letzte 14 Tage. ${am ? 'Durchschnittliche Stimmung ' + num(am, 1) + ' von 5.' : ''} ${as != null ? 'Durchschnittlich ' + num(as, 1) + ' Stunden Schlaf.' : ''}`;
+    if (!moods.length && !sleeps.length) return emptyState('📉', 'Do the check-in for a few days. Then you’ll see how mood and sleep are connected.');
+    const label = `Last 14 days. ${am ? 'Average mood ' + num(am, 1) + ' of 5.' : ''} ${as != null ? 'Average sleep ' + num(as, 1) + ' hours.' : ''}`;
     return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">
         ${[1, 3, 5].map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${ym(v)}" y2="${ym(v)}"/><text x="0" y="${ym(v) + 3}">${MOODS[v - 1].e}</text>`).join('')}
         <path class="l-sleep" d="${line('sleep', ys)}"/>${dots('sleep', ys, 'p-sleep')}
         <path class="l-mood" d="${line('mood', ym)}"/>${dots('mood', ym, 'p-mood')}
         <text x="${L}" y="${H - 4}">${shortDate(pts[0].d)}</text>
         <text x="${xp(7)}" y="${H - 4}" text-anchor="middle">${shortDate(pts[7].d)}</text>
-        <text x="${W - R}" y="${H - 4}" text-anchor="end">heute</text>
+        <text x="${W - R}" y="${H - 4}" text-anchor="end">today</text>
       </svg>
-      <div class="keys"><span><i></i>Stimmung${am ? ' Ø ' + num(am, 1) : ''}</span><span><i class="dash"></i>Schlaf${as != null ? ' Ø ' + num(as, 1) + ' h' : ''}</span></div></div>`;
+      <div class="keys"><span><i></i>Mood${am ? ' avg ' + num(am, 1) : ''}</span><span><i class="dash"></i>Sleep${as != null ? ' avg ' + num(as, 1) + ' h' : ''}</span></div></div>`;
   }
   function renderProgress() {
     const L = level(totalAura()), ds = allDates();
@@ -537,41 +538,41 @@
     const wins = Object.keys(S.days).sort().reverse().filter(d => (S.days[d].win || '').trim() || (S.days[d].journal || '').trim()).slice(0, 8);
     let ladder = ''; for (let i = 0; i < LEVELS.length; i++) ladder += `<i class="${i <= L.i ? 'on' : ''}"></i>`;
     $('#view-progress').innerHTML = `
-      <div class="view-head"><h1>Fortschritt</h1></div>
+      <div class="view-head"><h1>Progress</h1></div>
       <section class="card lvl-card" aria-labelledby="h-lvl">
         <div class="lvl-top">
           <div class="lvl-badge" aria-hidden="true"><small>Level</small><b>${L.n}</b></div>
-          <div><h2 class="lvl-name" id="h-lvl">${esc(L.name)}</h2><p class="muted">${num(L.total)} Aura gesammelt</p></div>
+          <div><h2 class="lvl-name" id="h-lvl">${esc(L.name)}</h2><p class="muted">${num(L.total)} Aura collected</p></div>
         </div>
         ${bar(L.p)}
-        <p class="hint" style="margin-top:8px">${L.to ? `Noch ${num(L.to - L.total)} Aura bis <strong>${esc(L.nextName)}</strong>` : 'Höchstes Level erreicht. Legendär.'}</p>
-        <div class="ladder" role="img" aria-label="Level ${L.n} von ${LEVELS.length}">${ladder}</div>
+        <p class="hint" style="margin-top:8px">${L.to ? `${num(L.to - L.total)} Aura to <strong>${esc(L.nextName)}</strong>` : 'Max level reached. Legendary.'}</p>
+        <div class="ladder" role="img" aria-label="Level ${L.n} of ${LEVELS.length}">${ladder}</div>
       </section>
-      <section class="stats" aria-label="Statistiken">
-        <div class="stat"><b>${documented}</b><span>Tage dokumentiert</span></div>
-        <div class="stat"><b>${bestStreak()}</b><span>längste Serie (Tage)</span></div>
-        <div class="stat"><b>${habitsDone}</b><span>Habits abgehakt</span></div>
-        <div class="stat"><b>${workouts}</b><span>Trainings</span></div>
+      <section class="stats" aria-label="Stats">
+        <div class="stat"><b>${documented}</b><span>days logged</span></div>
+        <div class="stat"><b>${bestStreak()}</b><span>longest streak (days)</span></div>
+        <div class="stat"><b>${habitsDone}</b><span>habits checked off</span></div>
+        <div class="stat"><b>${workouts}</b><span>workouts</span></div>
       </section>
-      <section class="card" aria-labelledby="h-heat"><h2 id="h-heat">Konstanz · 12 Wochen</h2>${heatmapHTML()}</section>
-      <section class="card" aria-labelledby="h-chart"><h2 id="h-chart">Stimmung & Schlaf</h2>${chartHTML()}</section>
+      <section class="card" aria-labelledby="h-heat"><h2 id="h-heat">Consistency · 12 weeks</h2>${heatmapHTML()}</section>
+      <section class="card" aria-labelledby="h-chart"><h2 id="h-chart">Mood & sleep</h2>${chartHTML()}</section>
       <section class="card" aria-labelledby="h-ph">
-        <div class="sec-head"><h2 id="h-ph">📸 Glow-up-Fotos</h2><button type="button" class="btn sm" data-action="add-photo" data-k="ph-add">+ Foto</button></div>
+        <div class="sec-head"><h2 id="h-ph">📸 Glow-up photos</h2><button type="button" class="btn sm" data-action="add-photo" data-k="ph-add">+ Photo</button></div>
         ${photos.length >= 2 ? `<div class="compare">
-            <figure><img data-photo="${oldest.id}" alt="Erstes Foto vom ${fullDate(oldest.date)}"><figcaption>Day ${dayNumber(oldest.date)}</figcaption></figure>
-            <figure><img data-photo="${newest.id}" alt="Neuestes Foto vom ${fullDate(newest.date)}"><figcaption>Day ${dayNumber(newest.date)}</figcaption></figure>
+            <figure><img data-photo="${oldest.id}" alt="First photo, ${fullDate(oldest.date)}"><figcaption>Day ${dayNumber(oldest.date)}</figcaption></figure>
+            <figure><img data-photo="${newest.id}" alt="Latest photo, ${fullDate(newest.date)}"><figcaption>Day ${dayNumber(newest.date)}</figcaption></figure>
           </div>` : ''}
-        ${photos.length ? `<div class="photos">${photos.map(p => `<button type="button" class="photo-btn" data-action="view-photo" data-id="${p.id}" data-k="pv-${p.id}" aria-label="Foto vom ${fullDate(p.date)} ansehen"><img data-photo="${p.id}" alt=""><span class="cap" aria-hidden="true">Day ${dayNumber(p.date)}</span></button>`).join('')}</div>`
-          : emptyState('🤳', 'Mach heute dein Day-1-Foto. In 30 Tagen wirst du froh sein, dass du es hast. Fotos bleiben nur auf deinem Gerät.')}
+        ${photos.length ? `<div class="photos">${photos.map(p => `<button type="button" class="photo-btn" data-action="view-photo" data-id="${p.id}" data-k="pv-${p.id}" aria-label="View photo from ${fullDate(p.date)}"><img data-photo="${p.id}" alt=""><span class="cap" aria-hidden="true">Day ${dayNumber(p.date)}</span></button>`).join('')}</div>`
+          : emptyState('🤳', 'Take your Day 1 photo today. In 30 days you’ll be glad you did. Photos only stay on your device.')}
       </section>
       <section class="card" aria-labelledby="h-wins">
-        <h2 id="h-wins">🏆 Wins & Journal</h2>
+        <h2 id="h-wins">🏆 Wins & journal</h2>
         ${wins.length ? `<ul class="wins">${wins.map(d => { const x = S.days[d]; return `<li><time datetime="${d}">${fullDate(d)} · Day ${dayNumber(d)}</time>${(x.win || '').trim() ? `<p><strong>${esc(x.win.trim())}</strong></p>` : ''}${(x.journal || '').trim() ? `<p class="muted">${esc(x.journal.trim())}</p>` : ''}</li>`; }).join('')}</ul>`
-          : emptyState('✍️', 'Schreib im Check-in deinen Win des Tages auf. Hier sammelt sich deine Erfolgsgeschichte.')}
+          : emptyState('✍️', 'Write down your win of the day in the check-in. Your success story builds up here.')}
       </section>`;
   }
 
-  /* ================= Rendern ================= */
+  /* ================= Render ================= */
   const VIEWS = { today: renderToday, habits: renderHabits, food: renderFood, train: renderTrain, progress: renderProgress };
   function renderChrome() {
     $$('.tabbar [data-view]').forEach(b => { if (b.dataset.view === view) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
@@ -585,7 +586,7 @@
     const L = level(totalAura());
     const chip = $('#levelChip');
     chip.innerHTML = `<span class="lv">Lv ${L.n}</span>${esc(L.name)}`;
-    chip.setAttribute('aria-label', `Level ${L.n}, ${L.name}. Fortschritt ansehen`);
+    chip.setAttribute('aria-label', `Level ${L.n}, ${L.name}. View progress`);
   }
   function render() {
     if (viewDate > todayIso()) viewDate = todayIso();
@@ -597,7 +598,7 @@
   }
   async function hydratePhotos() {
     for (const img of $$('img[data-photo]')) {
-      try { const u = await photoURL(img.dataset.photo); if (u) img.src = u; } catch (e) { /* Foto fehlt */ }
+      try { const u = await photoURL(img.dataset.photo); if (u) img.src = u; } catch (e) { /* photo missing */ }
     }
   }
   function refreshHero() {
@@ -623,11 +624,11 @@
     }
     document.body.appendChild(wrap); setTimeout(() => wrap.remove(), 2600);
   }
-  function celebrate(msg) { toast(msg, true); confetti(); if (navigator.vibrate) try { navigator.vibrate([18, 40, 18]); } catch (e) { /* egal */ } }
+  function celebrate(msg) { toast(msg, true); confetti(); if (navigator.vibrate) try { navigator.vibrate([18, 40, 18]); } catch (e) { /* fine */ } }
   function checkLevel() {
     const L = level(totalAura());
     if (S.lastLevel == null || L.n < S.lastLevel) { S.lastLevel = L.n; save(); return false; }
-    if (L.n > S.lastLevel) { S.lastLevel = L.n; save(); celebrate(`Level up! Du bist jetzt ${L.name} 🚀`); return true; }
+    if (L.n > S.lastLevel) { S.lastLevel = L.n; save(); celebrate(`Level up! You’re now ${L.name} 🚀`); return true; }
     return false;
   }
   function commit(msg) {
@@ -636,7 +637,7 @@
     if (msg && !leveled) toast(msg);
   }
 
-  /* ================= Aktionen ================= */
+  /* ================= Actions ================= */
   const actions = {
     nav(el) { view = el.dataset.view; render(); window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' }); },
     'date-prev'() { viewDate = shift(viewDate, -1); render(); },
@@ -649,28 +650,28 @@
       const all = on && due.length > 1 && due.every(x => has(x, viewDate));
       save(); render();
       if (checkLevel()) return;
-      if (all) celebrate('Alle Habits erledigt. Main-Character-Energie ✨');
+      if (all) celebrate('All habits done. Main character energy ✨');
       else if (on) toast(`+${AURA.habit} Aura · ${h.name} ✅`);
     },
-    'day-toggle'(el) { const h = findHabit(el.dataset.id); if (!h) return; const on = toggleDone(h, el.dataset.date); commit(on ? `${h.name} am ${DAYS[wd(el.dataset.date)]} nachgetragen` : null); },
+    'day-toggle'(el) { const h = findHabit(el.dataset.id); if (!h) return; const on = toggleDone(h, el.dataset.date); commit(on ? `${h.name} logged for ${DAYS[wd(el.dataset.date)]}` : null); },
     'new-habit'() { openHabit(null); },
     'edit-habit'(el) { openHabit(findHabit(el.dataset.id)); },
-    'add-template'(el) { const t = TEMPLATES[+el.dataset.i]; if (!t) return; S.habits.push(newHabit(t)); commit(`${t.emoji} ${t.name} hinzugefügt`); },
+    'add-template'(el) { const t = TEMPLATES[+el.dataset.i]; if (!t) return; S.habits.push(newHabit(t)); commit(`${t.emoji} ${t.name} added`); },
     'add-meal'() { openMeal(null); },
     'edit-meal'(el) { openMeal(getDay(viewDate).meals.find(m => m.id === el.dataset.id)); },
     'water-delta'(el) {
       const x = ensureDay(viewDate), G = goals(), before = x.water;
       x.water = clamp(before + Number(el.dataset.v), 0, 30);
-      const msg = x.water > before ? (x.water === G.water ? 'Wasserziel erreicht 💧 Hydration maxxed' : x.water < G.water ? `+${AURA.water} Aura · ${x.water}/${G.water} Gläser` : `${x.water} Gläser`) : null;
+      const msg = x.water > before ? (x.water === G.water ? 'Water goal reached 💧 Hydration maxxed' : x.water < G.water ? `+${AURA.water} Aura · ${x.water}/${G.water} glasses` : plural(x.water, 'glass', 'glasses')) : null;
       commit(msg);
     },
     'water-set'(el) {
       const x = ensureDay(viewDate); let v = Number(el.dataset.v); if (v === x.water) v -= 1;
-      x.water = clamp(v, 0, 30); commit(x.water === goals().water ? 'Wasserziel erreicht 💧' : null);
+      x.water = clamp(v, 0, 30); commit(x.water === goals().water ? 'Water goal reached 💧' : null);
     },
     'add-workout'() { openWorkout(null, viewDate); },
     'edit-workout'(el) { const d = el.dataset.date || viewDate; openWorkout((getDay(d).workouts || []).find(w => w.id === el.dataset.id), d); },
-    mood(el) { const x = ensureDay(viewDate), v = Number(el.dataset.v), first = !x.mood; x.mood = x.mood === v ? null : v; commit(first && x.mood ? `+${AURA.checkin} Aura · Check-in gespeichert` : null); },
+    mood(el) { const x = ensureDay(viewDate), v = Number(el.dataset.v), first = !x.mood; x.mood = x.mood === v ? null : v; commit(first && x.mood ? `+${AURA.checkin} Aura · Check-in saved` : null); },
     energy(el) { const x = ensureDay(viewDate), v = Number(el.dataset.v); x.energy = x.energy === v ? null : v; commit(); },
     sleep(el) { const x = ensureDay(viewDate); x.sleep = x.sleep == null ? 7.5 : clamp(x.sleep + Number(el.dataset.v), 0, 16); commit(); },
     'goto-checkin'() {
@@ -688,7 +689,7 @@
     const fn = actions[el.dataset.action]; if (!fn) return;
     e.preventDefault(); fn(el, e);
   });
-  // Win & Journal: beim Tippen speichern, beim Verlassen Aura aktualisieren
+  // Win & journal: save while typing, update Aura when leaving the field
   document.addEventListener('input', e => {
     const f = e.target.dataset && e.target.dataset.field; if (!f) return;
     ensureDay(viewDate)[f] = e.target.value;
@@ -699,7 +700,7 @@
     save(); refreshHero(); checkLevel();
   });
 
-  /* ================= Dialoge: Allgemein ================= */
+  /* ================= Dialogs: shared ================= */
   function radios(container, name, items, labelFn) {
     $(container).innerHTML = items.map(it => `<label><input type="radio" name="${name}" value="${esc(it.id)}"><span>${labelFn(it)}</span></label>`).join('');
   }
@@ -720,12 +721,10 @@
       else if (lastFocus && lastFocus.dataset && lastFocus.dataset.k) { const el = document.querySelector(`[data-k="${CSS.escape(lastFocus.dataset.k)}"]`); if (el) el.focus({ preventScroll: true }); }
     });
   });
-  // Zweistufiges Löschen: erster Tipp fragt nach, zweiter löscht
-  function armDelete(btn, label) {
-    btn.textContent = label; btn.dataset.armed = '';
-  }
+  // Two-step delete: first tap asks, second tap deletes
+  function armDelete(btn, label) { btn.textContent = label; btn.dataset.armed = ''; }
   function confirmStep(btn, label) {
-    if (btn.dataset.armed !== '1') { btn.dataset.armed = '1'; btn.textContent = 'Wirklich löschen?'; return false; }
+    if (btn.dataset.armed !== '1') { btn.dataset.armed = '1'; btn.textContent = 'Really delete?'; return false; }
     btn.dataset.armed = ''; btn.textContent = label; return true;
   }
 
@@ -737,32 +736,32 @@
   function syncEmojiPick() { const v = $('#hEmoji').value.trim(); $$('#hEmojiPick button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.emoji === v))); }
   $('#hEmojiPick').addEventListener('click', e => { const b = e.target.closest('[data-emoji]'); if (!b) return; $('#hEmoji').value = b.dataset.emoji; syncEmojiPick(); });
   $('#hEmoji').addEventListener('input', syncEmojiPick);
-  function freqNote() { const n = Number(radioVal('hfreq') || 7); $('#hFreqNote').textContent = n === 7 ? 'Jeden Tag.' : `${n} Tage pro Woche, du entscheidest welche. Die Serie zählt dann in Wochen.`; }
+  function freqNote() { const n = Number(radioVal('hfreq') || 7); $('#hFreqNote').textContent = n === 7 ? 'Every day.' : `${plural(n, 'day', 'days')} a week, you pick which. The streak counts in weeks.`; }
   $('#hFreq').addEventListener('change', freqNote);
   function openHabit(h) {
     editingHabit = h || null;
     const src = h || { emoji: '⭐', name: '', goal: '', cat: 'mind', perWeek: 7 };
-    $('#hTitle').textContent = h ? 'Habit bearbeiten' : 'Neuer Habit';
-    $('#hSave').textContent = h ? 'Speichern' : 'Hinzufügen';
+    $('#hTitle').textContent = h ? 'Edit habit' : 'New habit';
+    $('#hSave').textContent = h ? 'Save' : 'Add';
     $('#hEmoji').value = src.emoji; $('#hName').value = src.name; $('#hGoal').value = src.goal || '';
     setRadio('hcat', src.cat); setRadio('hfreq', String(src.perWeek)); freqNote(); syncEmojiPick();
-    $('#hDelete').hidden = !h; armDelete($('#hDelete'), 'Löschen');
+    $('#hDelete').hidden = !h; armDelete($('#hDelete'), 'Delete');
     show('#dlgHabit', h ? null : '#hName');
   }
   $('#hDelete').addEventListener('click', function () {
-    if (!editingHabit || !confirmStep(this, 'Löschen')) return;
+    if (!editingHabit || !confirmStep(this, 'Delete')) return;
     const name = editingHabit.name; S.habits = S.habits.filter(h => h.id !== editingHabit.id);
-    hide('#dlgHabit'); commit(`${name} gelöscht`);
+    hide('#dlgHabit'); commit(`${name} deleted`);
   });
   $('#formHabit').addEventListener('submit', e => {
     e.preventDefault();
     const name = $('#hName').value.trim(); if (!name) { $('#hName').focus(); return; }
     const data = { emoji: $('#hEmoji').value.trim() || '⭐', name, goal: $('#hGoal').value.trim(), cat: radioVal('hcat') || 'mind', perWeek: Number(radioVal('hfreq') || 7) };
     if (editingHabit) Object.assign(editingHabit, data); else S.habits.push(newHabit(data));
-    const isNew = !editingHabit; hide('#dlgHabit'); commit(isNew ? `${data.emoji} ${name} hinzugefügt` : 'Gespeichert');
+    const isNew = !editingHabit; hide('#dlgHabit'); commit(isNew ? `${data.emoji} ${name} added` : 'Saved');
   });
 
-  /* ================= Dialog: Mahlzeit ================= */
+  /* ================= Dialog: Meal ================= */
   let editingMeal = null, recentCache = [];
   radios('#mType', 'mtype', MEAL_TYPES, it => `<span aria-hidden="true">${it.e}</span>${esc(it.label)}`);
   $('#mTags').innerHTML = MEAL_TAGS.map(t => `<label><input type="checkbox" name="mtag" value="${t.id}"><span><span aria-hidden="true">${t.e}</span>${esc(t.label)}</span></label>`).join('');
@@ -774,13 +773,13 @@
   }
   function openMeal(m) {
     editingMeal = m || null;
-    $('#mTitle').textContent = m ? 'Mahlzeit bearbeiten' : 'Mahlzeit eintragen';
+    $('#mTitle').textContent = m ? 'Edit meal' : 'Log a meal';
     fillMeal(m || {});
     $('#mTime').value = m ? (m.time || '') : (viewDate === todayIso() ? nowTime() : '12:00');
     recentCache = m ? [] : recentMeals();
-    $('#mRecent').innerHTML = recentCache.length ? `<p class="q-label" style="margin-bottom:8px">Schnell wieder eintragen</p><div class="chips">${recentCache.map((r, i) => `<button type="button" class="chip" data-recent="${i}"><span aria-hidden="true">${mealType(r.type).e}</span>${esc(r.name)}</button>`).join('')}</div>` : '';
+    $('#mRecent').innerHTML = recentCache.length ? `<p class="q-label" style="margin-bottom:8px">Log again</p><div class="chips">${recentCache.map((r, i) => `<button type="button" class="chip" data-recent="${i}"><span aria-hidden="true">${mealType(r.type).e}</span>${esc(r.name)}</button>`).join('')}</div>` : '';
     $('#mRecent').hidden = !recentCache.length;
-    $('#mDelete').hidden = !m; armDelete($('#mDelete'), 'Löschen');
+    $('#mDelete').hidden = !m; armDelete($('#mDelete'), 'Delete');
     show('#dlgMeal', m ? null : '#mName');
   }
   $('#mRecent').addEventListener('click', e => {
@@ -789,9 +788,9 @@
     fillMeal(Object.assign({}, r, { type: defaultMealType() })); $('#mName').focus();
   });
   $('#mDelete').addEventListener('click', function () {
-    if (!editingMeal || !confirmStep(this, 'Löschen')) return;
+    if (!editingMeal || !confirmStep(this, 'Delete')) return;
     const x = ensureDay(viewDate); x.meals = x.meals.filter(m => m.id !== editingMeal.id);
-    hide('#dlgMeal'); commit('Mahlzeit gelöscht');
+    hide('#dlgMeal'); commit('Meal deleted');
   });
   $('#formMeal').addEventListener('submit', e => {
     e.preventDefault();
@@ -807,19 +806,19 @@
     else x.meals.push(meal);
     x.meals.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
     const isNew = !editingMeal; hide('#dlgMeal');
-    commit(isNew ? (x.meals.length <= 6 ? `+${AURA.meal} Aura · ${name} eingetragen` : `${name} eingetragen`) : 'Gespeichert');
+    commit(isNew ? (x.meals.length <= 6 ? `+${AURA.meal} Aura · ${name} logged` : `${name} logged`) : 'Saved');
   });
 
-  /* ================= Dialog: Training ================= */
+  /* ================= Dialog: Workout ================= */
   let editingWo = null, editingWoDate = null;
   radios('#wType', 'wtype', WO_TYPES, it => `<span aria-hidden="true">${it.e}</span>${esc(it.label)}`);
   radios('#wInt', 'wint', [1, 2, 3, 4, 5].map(n => ({ id: String(n) })), it => it.id);
   function exRowHTML(e, i) {
-    return `<input class="ex-name" list="exList" placeholder="z. B. Bankdrücken" aria-label="Übung ${i}: Name" value="${esc(e.name || '')}" autocomplete="off">
-      <input class="ex-sets" type="number" inputmode="numeric" min="1" max="30" placeholder="3" aria-label="Übung ${i}: Sätze" value="${e.sets != null ? e.sets : ''}">
-      <input class="ex-reps" type="number" inputmode="numeric" min="1" max="300" placeholder="10" aria-label="Übung ${i}: Wiederholungen" value="${e.reps != null ? e.reps : ''}">
-      <input class="ex-kg" type="number" inputmode="decimal" min="0" max="999" step="0.5" placeholder="kg" aria-label="Übung ${i}: Gewicht in Kilogramm" value="${e.kg != null ? e.kg : ''}">
-      <button type="button" class="icon-btn sm" data-ex-remove aria-label="Übung ${i} entfernen">×</button>`;
+    return `<input class="ex-name" list="exList" placeholder="e.g. Bench press" aria-label="Exercise ${i}: name" value="${esc(e.name || '')}" autocomplete="off">
+      <input class="ex-sets" type="number" inputmode="numeric" min="1" max="30" placeholder="3" aria-label="Exercise ${i}: sets" value="${e.sets != null ? e.sets : ''}">
+      <input class="ex-reps" type="number" inputmode="numeric" min="1" max="300" placeholder="10" aria-label="Exercise ${i}: reps" value="${e.reps != null ? e.reps : ''}">
+      <input class="ex-kg" type="number" inputmode="decimal" min="0" max="999" step="0.5" placeholder="kg" aria-label="Exercise ${i}: weight in kilograms" value="${e.kg != null ? e.kg : ''}">
+      <button type="button" class="icon-btn sm" data-ex-remove aria-label="Remove exercise ${i}">×</button>`;
   }
   function addExRow(e) {
     const wrap = $('#wEx'), div = document.createElement('div');
@@ -829,11 +828,11 @@
   function renumberEx() {
     $$('#wEx .ex-row').forEach((row, i) => {
       const n = i + 1;
-      row.querySelector('.ex-name').setAttribute('aria-label', `Übung ${n}: Name`);
-      row.querySelector('.ex-sets').setAttribute('aria-label', `Übung ${n}: Sätze`);
-      row.querySelector('.ex-reps').setAttribute('aria-label', `Übung ${n}: Wiederholungen`);
-      row.querySelector('.ex-kg').setAttribute('aria-label', `Übung ${n}: Gewicht in Kilogramm`);
-      row.querySelector('[data-ex-remove]').setAttribute('aria-label', `Übung ${n} entfernen`);
+      row.querySelector('.ex-name').setAttribute('aria-label', `Exercise ${n}: name`);
+      row.querySelector('.ex-sets').setAttribute('aria-label', `Exercise ${n}: sets`);
+      row.querySelector('.ex-reps').setAttribute('aria-label', `Exercise ${n}: reps`);
+      row.querySelector('.ex-kg').setAttribute('aria-label', `Exercise ${n}: weight in kilograms`);
+      row.querySelector('[data-ex-remove]').setAttribute('aria-label', `Remove exercise ${n}`);
     });
   }
   $('#wAddEx').addEventListener('click', () => { addExRow().querySelector('.ex-name').focus(); });
@@ -846,7 +845,7 @@
   function openWorkout(w, date) {
     editingWo = w || null; editingWoDate = date || viewDate;
     const last = allWorkouts()[0];
-    $('#wTitle').textContent = w ? 'Training bearbeiten' : 'Training eintragen';
+    $('#wTitle').textContent = w ? 'Edit workout' : 'Log a workout';
     setRadio('wtype', w ? w.type : (last ? last.w.type : 'strength'));
     $('#wDur').value = w ? w.duration : (last ? last.w.duration : 45);
     $('#wTime').value = w ? (w.time || '') : (editingWoDate === todayIso() ? nowTime() : '18:00');
@@ -857,13 +856,13 @@
     (w && w.exercises && w.exercises.length ? w.exercises : [{}]).forEach(addExRow);
     $('#exList').innerHTML = exerciseNames().map(n => `<option value="${esc(n)}"></option>`).join('');
     updateWoFields();
-    $('#wDelete').hidden = !w; armDelete($('#wDelete'), 'Löschen');
+    $('#wDelete').hidden = !w; armDelete($('#wDelete'), 'Delete');
     show('#dlgWorkout');
   }
   $('#wDelete').addEventListener('click', function () {
-    if (!editingWo || !confirmStep(this, 'Löschen')) return;
+    if (!editingWo || !confirmStep(this, 'Delete')) return;
     const x = ensureDay(editingWoDate); x.workouts = x.workouts.filter(w => w.id !== editingWo.id);
-    hide('#dlgWorkout'); commit('Training gelöscht');
+    hide('#dlgWorkout'); commit('Workout deleted');
   });
   $('#formWorkout').addEventListener('submit', e => {
     e.preventDefault();
@@ -874,7 +873,7 @@
       sets: numOrNull(r.querySelector('.ex-sets').value), reps: numOrNull(r.querySelector('.ex-reps').value), kg: numOrNull(r.querySelector('.ex-kg').value)
     })).filter(x => x.name);
     const id = editingWo ? editingWo.id : uid();
-    // Neue Bestleistung?
+    // New personal record?
     let pr = null;
     for (const ex of exercises) { if (!(ex.kg > 0)) continue; const prev = maxKg(ex.name, id); if (prev > 0 && ex.kg > prev && (!pr || ex.kg - prev > pr.diff)) pr = { name: ex.name, kg: ex.kg, diff: ex.kg - prev }; }
     const dist = numOrNull($('#wDist').value);
@@ -886,11 +885,11 @@
     const isNew = !editingWo; hide('#dlgWorkout');
     save(); render();
     if (checkLevel()) return;
-    if (pr) celebrate(`🏆 Neue Bestleistung: ${pr.name} ${num(pr.kg, 1)} kg`);
-    else toast(isNew ? `+${AURA.workout} Aura · ${woType(type).label}, ${wo.duration} Min. 💪` : 'Gespeichert');
+    if (pr) celebrate(`🏆 New PR: ${pr.name} ${num(pr.kg, 1)} kg`);
+    else toast(isNew ? `+${AURA.workout} Aura · ${woType(type).label}, ${wo.duration} min 💪` : 'Saved');
   });
 
-  /* ================= Fotos ================= */
+  /* ================= Photos ================= */
   async function compress(file) {
     const url = URL.createObjectURL(file);
     try {
@@ -908,26 +907,26 @@
       const first = !S.photos.some(p => p.date === date);
       const blob = await compress(f), id = 'p' + uid();
       await idb.put(id, blob); S.photos.push({ id, date });
-      commit(first ? `+${AURA.photo} Aura · Foto gespeichert 📸` : 'Foto gespeichert 📸');
-    } catch (err) { toast('Das Foto konnte nicht gespeichert werden.'); }
+      commit(first ? `+${AURA.photo} Aura · Photo saved 📸` : 'Photo saved 📸');
+    } catch (err) { toast('The photo couldn’t be saved.'); }
   });
   let viewingPhoto = null;
   async function openPhoto(id) {
     const p = S.photos.find(x => x.id === id); if (!p) return;
     viewingPhoto = p; $('#pTitle').textContent = `Day ${dayNumber(p.date)} · ${fullDate(p.date)}`;
-    const img = $('#pImg'); img.removeAttribute('src'); img.alt = `Fortschrittsfoto vom ${fullDate(p.date)}`;
-    armDelete($('#pDelete'), 'Löschen'); show('#dlgPhoto');
-    try { const u = await photoURL(id); if (u) img.src = u; } catch (e) { /* ignorieren */ }
+    const img = $('#pImg'); img.removeAttribute('src'); img.alt = `Progress photo, ${fullDate(p.date)}`;
+    armDelete($('#pDelete'), 'Delete'); show('#dlgPhoto');
+    try { const u = await photoURL(id); if (u) img.src = u; } catch (e) { /* ignore */ }
   }
   $('#pDelete').addEventListener('click', async function () {
-    if (!viewingPhoto || !confirmStep(this, 'Löschen')) return;
+    if (!viewingPhoto || !confirmStep(this, 'Delete')) return;
     const id = viewingPhoto.id;
-    try { await idb.del(id); } catch (e) { /* trotzdem entfernen */ }
+    try { await idb.del(id); } catch (e) { /* remove anyway */ }
     if (photoURLs.has(id)) { URL.revokeObjectURL(photoURLs.get(id)); photoURLs.delete(id); }
-    S.photos = S.photos.filter(p => p.id !== id); hide('#dlgPhoto'); commit('Foto gelöscht');
+    S.photos = S.photos.filter(p => p.id !== id); hide('#dlgPhoto'); commit('Photo deleted');
   });
 
-  /* ================= Tageskarte zum Teilen ================= */
+  /* ================= Shareable day card ================= */
   function rrect(g, x, y, w, h, r) {
     g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
     g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
@@ -943,7 +942,7 @@
   async function makeCard(d) {
     const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d');
-    try { await Promise.race([document.fonts.load('800 100px "Bricolage Grotesque"'), new Promise(r => setTimeout(r, 1500))]); } catch (e) { /* Systemschrift */ }
+    try { await Promise.race([document.fonts.load('800 100px "Bricolage Grotesque"'), new Promise(r => setTimeout(r, 1500))]); } catch (e) { /* system font */ }
     const FD = '"Bricolage Grotesque", system-ui, sans-serif', FB = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
     const x = getDay(d), a = auraFor(d), L = level(totalAura()), G = goals();
     const due = S.habits.filter(h => dueOn(h, d)), done = due.filter(h => has(h, d)).length;
@@ -952,7 +951,7 @@
     g.fillStyle = bg; g.fillRect(0, 0, W, H);
     const glow = (gx, gy, r, col) => { const rg = g.createRadialGradient(gx, gy, 0, gx, gy, r); rg.addColorStop(0, col); rg.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = rg; g.fillRect(0, 0, W, H); };
     glow(900, 380, 640, 'rgba(200,255,62,.26)'); glow(100, 1560, 760, 'rgba(150,120,255,.26)');
-    // Kopf
+    // Header
     g.textBaseline = 'alphabetic'; g.textAlign = 'left';
     g.font = `800 54px ${FD}`; g.fillStyle = INK; g.fillText('aura', 80, 150);
     const aw = g.measureText('aura').width; g.fillStyle = LIME; g.fillText('maxx', 80 + aw, 150);
@@ -967,16 +966,16 @@
     if (p > 0) { g.strokeStyle = LIME; g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p); g.stroke(); }
     g.textAlign = 'center'; g.fillStyle = INK; g.font = `800 150px ${FD}`; g.fillText(String(a), cx, cy + 44);
     g.font = `700 32px ${FB}`; g.fillStyle = MUTED; g.fillText('AURA', cx, cy + 100);
-    if (a >= DAILY_GOAL) { g.textAlign = 'right'; g.font = `800 44px ${FD}`; g.fillStyle = LIME; g.fillText('TAG GEMAXXT ✓', W - 80, 330); }
-    // Werte
+    if (a >= DAILY_GOAL) { g.textAlign = 'right'; g.font = `800 44px ${FD}`; g.fillStyle = LIME; g.fillText('DAY MAXXED ✓', W - 80, 330); }
+    // Stats
     const mins = minutesOf(x), prot = proteinOf(x);
     const stats = [
       ['✅', `${done}/${due.length}`, 'Habits'],
-      ['💧', `${x.water}/${G.water}`, 'Gläser Wasser'],
-      ['🏋️', mins ? `${mins} Min.` : '–', 'Training'],
-      G.protein > 0 ? ['💪', `${num(prot)} g`, 'Protein'] : ['🍽️', String(x.meals.length), 'Mahlzeiten'],
-      [x.mood ? MOODS[x.mood - 1].e : '🫥', x.mood ? MOODS[x.mood - 1].l : '–', 'Stimmung'],
-      ['😴', x.sleep != null ? `${num(x.sleep, 1)} h` : '–', 'Schlaf']
+      ['💧', `${x.water}/${G.water}`, 'Glasses of water'],
+      ['🏋️', mins ? `${mins} min` : '–', 'Workout'],
+      G.protein > 0 ? ['💪', `${num(prot)} g`, 'Protein'] : ['🍽️', String(x.meals.length), 'Meals'],
+      [x.mood ? MOODS[x.mood - 1].e : '🫥', x.mood ? MOODS[x.mood - 1].l : '–', 'Mood'],
+      ['😴', x.sleep != null ? `${num(x.sleep, 1)} h` : '–', 'Sleep']
     ];
     const bx = 80, by = 1250, gap = 20, bw = (W - 160 - gap * 2) / 3, bh = 196;
     stats.forEach((s, i) => {
@@ -992,7 +991,7 @@
       g.textAlign = 'left'; g.font = `700 40px ${FB}`; g.fillStyle = INK;
       wrapLines(g, '🏆 ' + win, W - 160, 2).forEach((ln, i) => g.fillText(ln, 80, 1745 + i * 54));
     }
-    // Fuß
+    // Footer
     g.textAlign = 'center'; g.font = `700 30px ${FB}`; g.fillStyle = MUTED;
     g.fillText(`Lv ${L.n} ${L.name}  ·  #lifemaxxing  ·  #auramaxx`, W / 2, 1868);
     return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/png'));
@@ -1000,26 +999,26 @@
   let shareBlob = null, shareURL = null, shareDay = null;
   async function openShare(d) {
     shareDay = d; const img = $('#shareImg'); img.removeAttribute('src'); img.alt = '';
-    $('#shareStatus').textContent = 'Karte wird erstellt …'; $('#shareBtn').hidden = true;
+    $('#shareStatus').textContent = 'Creating your card …'; $('#shareBtn').hidden = true;
     show('#dlgShare');
     try {
       shareBlob = await makeCard(d);
       if (shareURL) URL.revokeObjectURL(shareURL);
       shareURL = URL.createObjectURL(shareBlob);
-      img.src = shareURL; img.alt = `Tageskarte für Day ${dayNumber(d)}, ${auraFor(d)} Aura`;
+      img.src = shareURL; img.alt = `Day card for Day ${dayNumber(d)}, ${auraFor(d)} Aura`;
       const dl = $('#shareDl'); dl.href = shareURL; dl.download = `auramaxx-day-${dayNumber(d)}.png`;
       const file = new File([shareBlob], dl.download, { type: 'image/png' });
       $('#shareBtn').hidden = !(navigator.canShare && navigator.canShare({ files: [file] }));
       $('#shareStatus').textContent = '';
-    } catch (e) { $('#shareStatus').textContent = 'Das hat nicht geklappt. Versuch es bitte nochmal.'; }
+    } catch (e) { $('#shareStatus').textContent = 'That didn’t work. Please try again.'; }
   }
   $('#shareBtn').addEventListener('click', async () => {
     if (!shareBlob) return;
     try { await navigator.share({ files: [new File([shareBlob], `auramaxx-day-${dayNumber(shareDay)}.png`, { type: 'image/png' })], text: `Day ${dayNumber(shareDay)} ✨ #lifemaxxing #auramaxx` }); }
-    catch (e) { /* abgebrochen */ }
+    catch (e) { /* cancelled */ }
   });
 
-  /* ================= Einstellungen ================= */
+  /* ================= Settings ================= */
   function applyTheme() {
     const t = S.settings && S.settings.theme || 'auto', root = document.documentElement;
     if (t === 'auto') root.removeAttribute('data-theme'); else root.dataset.theme = t;
@@ -1029,7 +1028,7 @@
   function openSettings() {
     const G = goals();
     $('#sName').value = S.profile && S.profile.name || ''; $('#sWater').value = G.water; $('#sProtein').value = G.protein; $('#sWorkouts').value = G.workouts;
-    setRadio('theme', S.settings.theme || 'auto'); armDelete($('#sReset'), 'Alles zurücksetzen');
+    setRadio('theme', S.settings.theme || 'auto'); armDelete($('#sReset'), 'Reset everything');
     show('#dlgSettings');
   }
   $('#formSettings').addEventListener('submit', e => {
@@ -1042,14 +1041,14 @@
       workouts: clamp(Math.round(numOrNull($('#sWorkouts').value) || 3), 1, 14)
     };
     S.settings.theme = radioVal('theme') || 'auto'; applyTheme();
-    hide('#dlgSettings'); commit('Einstellungen gespeichert');
+    hide('#dlgSettings'); commit('Settings saved');
   });
   $('#sTheme').addEventListener('change', () => { S.settings.theme = radioVal('theme') || 'auto'; applyTheme(); save(); });
   $('#sExport').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `auramaxx-backup-${todayIso()}.json`;
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    toast('Backup heruntergeladen');
+    toast('Backup downloaded');
   });
   $('#sImport').addEventListener('click', () => $('#importInput').click());
   $('#importInput').addEventListener('change', async e => {
@@ -1057,13 +1056,13 @@
     try {
       const p = JSON.parse(await f.text());
       if (!p || p.v !== 1 || !Array.isArray(p.habits) || typeof p.days !== 'object') throw new Error('format');
-      p.photos = S.photos; // Fotos liegen nur auf diesem Gerät
-      S = Object.assign(fresh(), p); applyTheme(); hide('#dlgSettings'); commit('Backup importiert');
-    } catch (err) { toast('Diese Datei ist kein auramaxx-Backup.'); }
+      p.photos = S.photos; // photos only live on this device
+      S = Object.assign(fresh(), p); applyTheme(); hide('#dlgSettings'); commit('Backup imported');
+    } catch (err) { toast('This file isn’t an auramaxx backup.'); }
   });
   $('#sReset').addEventListener('click', async function () {
-    if (!confirmStep(this, 'Alles zurücksetzen')) return;
-    try { await idb.clear(); } catch (e) { /* egal */ }
+    if (!confirmStep(this, 'Reset everything')) return;
+    try { await idb.clear(); } catch (e) { /* fine */ }
     photoURLs.forEach(u => URL.revokeObjectURL(u)); photoURLs.clear();
     S = fresh(); save(); applyTheme(); hide('#dlgSettings'); view = 'today'; viewDate = todayIso(); render(); openOnboarding();
   });

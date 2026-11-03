@@ -1,8 +1,8 @@
 {
-  "name": "auramaxx – Lifemaxxing-Tracker",
+  "name": "auramaxx – lifemaxxing tracker",
   "short_name": "auramaxx",
-  "description": "Habits, Ernährung, Training, Schlaf und Fortschrittsfotos dokumentieren. Sammle Aura und level hoch.",
-  "lang": "de",
+  "description": "Track habits, food, workouts, sleep and progress photos. Farm Aura and level up.",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
