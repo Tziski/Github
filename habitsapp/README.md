@@ -38,6 +38,7 @@ Eine englischsprachige App für Self-Improvement im Stil vom TikTok-Trend **Life
 
 **Sonstiges**
 - Installierbar als App auf dem Handy (PWA) und offline nutzbar
+- Sprachen: Englisch, Deutsch, Spanisch, Französisch. Die Auswahl mit Flaggen findest du in den Einstellungen und beim ersten Start; standardmäßig nimmt die App die Sprache des Handys. Alle Texte stehen in `i18n.js`.
 - Dunkler und heller Modus
 - Backup als Datei exportieren und wieder importieren
 - Alle Daten bleiben auf dem Gerät. Es gibt keinen Server und keinen Account.
