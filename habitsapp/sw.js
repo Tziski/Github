@@ -1,10 +1,11 @@
 /* auramaxx service worker: makes the app work offline.
    Bump the version number whenever files change. */
-const CACHE = 'auramaxx-v2';
+const CACHE = 'auramaxx-v3';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './i18n.js',
   './app.js',
   './manifest.webmanifest',
   './icons/icon.svg',
